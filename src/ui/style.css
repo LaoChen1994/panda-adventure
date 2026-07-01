@@ -1,0 +1,954 @@
+/* 
+ * 《熊猫探险》 现代 UI 样式表
+ * 风格：国风科幻、暗色扁平、玻璃折射 (Glassmorphism)、微动效
+ */
+
+:root {
+  --bg-dark: #1e251c; /* 卡通暗绿背景 */
+  --bg-card: #fdf6ec;  /* 软萌羊皮纸木卡片 */
+  --border-dark: #4a2e1b; /* 粗体卡通边框深褐色 */
+  --text-primary: #4a2e1b; /* 粗体深褐字 */
+  --text-muted: #8c735d;
+  --gold: #ffb800; /* 卡通暖金 */
+  --gold-glow: rgba(255, 184, 0, 0.4);
+  --red: #ff3e3e;
+
+  /* 品质分色 (白、绿、蓝、紫、红) */
+  --q1-white: #94a3b8;
+  --q2-green: #37d363;
+  --q3-blue: #3d88ff;
+  --q4-purple: #b97bff;
+  --q5-red: #ff3e3e;
+
+  --transition-fast: 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --transition-smooth: 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--text-primary);
+}
+
+/* Phaser 画布挂载层 */
+#game-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* UI 叠层容器 */
+#ui-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  pointer-events: none; /* 穿透，避免阻挡画布的点击 */
+}
+
+/* 屏幕暗角滤镜 (Vignette) */
+#ui-container::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+  z-index: -1;
+}
+
+/* 基础 UI 视图面板 */
+.ui-screen {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  opacity: 0;
+  pointer-events: auto; /* 恢复点击阻挡，UI 层拦截 */
+  transition: opacity 0.2s ease-in-out;
+  padding: 20px;
+}
+
+.ui-screen.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* 卡通版木板容器 -> 精致玻璃/木质混合风格 */
+.glass-card {
+  background: rgba(253, 246, 236, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 3px solid var(--border-dark);
+  border-radius: 24px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 8px 0 var(--border-dark);
+  padding: 24px;
+  position: relative;
+}
+
+/* 通用气泡泥塑按钮 */
+.btn {
+  background: #a06e42; /* 浅木褐 */
+  border: 3px solid var(--border-dark);
+  border-radius: 16px;
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 10px 20px;
+  text-align: center;
+  box-shadow: 0 6px 0 var(--border-dark);
+  transition: all var(--transition-fast);
+  outline: none;
+  text-shadow: -1px -1px 0 var(--border-dark), 1px -1px 0 var(--border-dark), -1px 1px 0 var(--border-dark), 1px 1px 0 var(--border-dark);
+}
+
+.btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 0 var(--border-dark);
+  background: #b27f52;
+}
+
+.btn:active {
+  transform: translateY(4px) scale(0.98);
+  box-shadow: 0 2px 0 var(--border-dark);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffc72a 0%, #ff8c00 100%);
+  border-color: var(--border-dark);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #ffd750 0%, #ff9c1a 100%);
+}
+
+.btn-secondary {
+  background: linear-gradient(180deg, #57d478 0%, #209d43 100%);
+  border-color: var(--border-dark);
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(180deg, #6ae78a 0%, #28af4e 100%);
+}
+
+.btn-large {
+  padding: 14px 30px;
+  font-size: 1.1rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 0 var(--border-dark);
+}
+
+.btn-large:hover {
+  box-shadow: 0 10px 0 var(--border-dark);
+}
+
+.btn-large:active {
+  box-shadow: 0 2px 0 var(--border-dark);
+}
+
+/* 文本高亮 */
+.text-gold {
+  color: var(--gold);
+  text-shadow: -1px -1px 0 var(--border-dark), 1px -1px 0 var(--border-dark), -1px 1px 0 var(--border-dark), 1px 1px 0 var(--border-dark);
+}
+.text-red {
+  color: var(--red);
+  text-shadow: -1px -1px 0 var(--border-dark), 1px -1px 0 var(--border-dark), -1px 1px 0 var(--border-dark), 1px 1px 0 var(--border-dark);
+}
+.text-muted { color: var(--text-muted); }
+
+/* Glow 炫光动效脉冲 */
+.animate-glow {
+  animation: glowPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes glowPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* =======================================================
+ * 1. 主菜单 (Menu Screen)
+ * ======================================================= */
+#menu-screen {
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(13, 17, 23, 0.4) 0%, rgba(13, 17, 23, 0.95) 100%);
+}
+
+.main-menu-card {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: slideUp var(--transition-smooth) forwards;
+}
+
+.game-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 30%, #ffd700 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 2px;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.75));
+}
+
+.game-subtitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 6px;
+  margin-top: -15px;
+}
+
+.character-selector {
+  width: 100%;
+  text-align: center;
+}
+
+.character-selector h3 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+
+.character-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.char-slot {
+  aspect-ratio: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  transition: all var(--transition-fast);
+}
+
+.char-slot:hover {
+  background: rgba(255,255,255,0.1);
+  transform: scale(1.05);
+}
+
+.char-slot.selected {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+.character-info-box {
+  width: 100%;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 0.9rem;
+  min-height: 120px;
+}
+
+.char-info-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.char-info-passive {
+  color: var(--gold);
+  margin-top: 8px;
+}
+
+/* =======================================================
+ * 2. 战斗 HUD 界面 (HUD Screen)
+ * ======================================================= */
+#hud-screen {
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none; /* 战斗中鼠标操作直接穿过 */
+}
+
+/* 顶部全局经验条 */
+.global-xp-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 60;
+}
+
+.global-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffc72a, #ff8c00, #ffc72a);
+  background-size: 200% 100%;
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 10px rgba(255, 184, 0, 0.8);
+  animation: xpPulse 2s linear infinite;
+}
+
+@keyframes xpPulse {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.xp-text-indicator {
+  font-size: 0.85rem;
+  color: var(--gold);
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+/* 顶部 HUD 栏 */
+.hud-top {
+  position: absolute;
+  top: 25px;
+  left: 20px;
+  right: 20px;
+  width: calc(100% - 40px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: auto;
+  z-index: 50;
+}
+
+.hud-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 30%;
+  max-width: 180px;
+}
+
+.level-indicator {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--gold);
+}
+
+.hud-center {
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(8px);
+  padding: 6px 16px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.wave-timer {
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.hud-right {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+
+/* 属性小抽屉按钮 */
+.hud-stats-btn {
+  pointer-events: auto;
+  position: absolute;
+  left: 20px;
+  top: 70px;
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid var(--border-light);
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.8rem;
+  z-index: 100;
+}
+
+.stats-drawer-overlay {
+  pointer-events: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(30, 37, 28, 0.7); /* 磨砂暗色背景 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.stats-drawer-overlay.active {
+  display: flex;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.stats-drawer-card {
+  width: 95%;
+  max-width: 800px;
+  height: 85vh;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 40px 30px 30px 30px;
+}
+
+.stats-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.stats-close-btn:hover {
+  color: var(--red);
+  transform: scale(1.1);
+}
+
+.stats-drawer-card h3 {
+  font-size: 1.3rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+  border-bottom: 4px solid var(--border-dark);
+  padding-bottom: 8px;
+  text-align: center;
+}
+
+.stats-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  font-size: 1.1rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+  padding-bottom: 6px;
+}
+
+.stat-item:first-child {
+  grid-column: span 2;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
+
+/* 移动端摇杆提示 */
+.mobile-tip {
+  align-self: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.4);
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+/* 底部武器展示格 */
+.hud-weapons {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+  z-index: 50;
+}
+
+.hud-weapon-icon {
+  width: 44px;
+  height: 44px;
+  background: rgba(22, 27, 34, 0.8);
+  border: 2px solid var(--border-light);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+}
+
+/* 依据品质变更边框色 */
+.border-q1 { border-color: var(--q1-white); }
+.border-q2 { border-color: var(--q2-green); }
+.border-q3 { border-color: var(--q3-blue); }
+.border-q4 { border-color: var(--q4-purple); }
+.border-q5 { border-color: var(--q5-red); }
+
+/* =======================================================
+ * 3. 升级弹窗 (Level Up Screen)
+ * ======================================================= */
+#levelup-screen {
+  justify-content: center;
+  align-items: center;
+  background: rgba(13, 17, 23, 0.85);
+}
+
+.overlay-card {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  text-align: center;
+  animation: zoomIn var(--transition-fast) forwards;
+}
+
+.screen-title {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.screen-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.option-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.option-card:hover {
+  background: rgba(255,255,255,0.08);
+  transform: translateX(5px);
+}
+
+.option-icon {
+  font-size: 2rem;
+}
+
+.option-details h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.option-details p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* 升级卡片品质边框 */
+.card-q1 { border-left: 5px solid var(--q1-white); }
+.card-q2 { border-left: 5px solid var(--q2-green); }
+.card-q3 { border-left: 5px solid var(--q3-blue); }
+.card-q4 { border-left: 5px solid var(--q4-purple); }
+
+.card-q1 h4 { color: var(--q1-white); }
+.card-q2 h4 { color: var(--q2-green); }
+.card-q3 h4 { color: var(--q3-blue); }
+.card-q4 h4 { color: var(--q4-purple); }
+
+/* =======================================================
+ * 4. 商店界面 (Shop Screen)
+ * ======================================================= */
+#shop-screen {
+  background: rgba(13, 17, 23, 0.95);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.shop-container {
+  width: 100%;
+  max-width: 960px;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.shop-wallet {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.shop-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  min-height: 0; /* 允许内部元素滚动 */
+}
+
+/* 商店商品集市 */
+.shop-goods-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-height: 0;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gold);
+  border-left: 4px solid var(--gold);
+  padding-left: 8px;
+}
+
+.goods-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.good-card {
+  background: #ffffff;
+  border: 3px solid var(--border-dark);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 0 var(--border-dark);
+}
+
+.good-card:hover {
+  background: #fffbf5;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--border-dark);
+}
+
+.good-top {
+  display: flex;
+  gap: 12px;
+}
+
+.good-icon {
+  width: 48px;
+  height: 48px;
+  background: #fdf6ec;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  border: 2px solid var(--border-dark) !important;
+}
+
+.good-details h4 {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.good-details p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.good-price-tag {
+  align-self: flex-end;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #c2610b;
+  background: #fff3db;
+  border: 2px solid var(--border-dark);
+  padding: 2px 8px;
+  border-radius: 6px;
+  box-shadow: 0 2px 0 var(--border-dark);
+}
+
+/* 商店操作 */
+.shop-actions {
+  display: flex;
+  gap: 10px;
+}
+
+#shop-reroll-btn {
+  flex: 1;
+}
+
+/* 玩家装备面板 */
+.player-inventory-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 6个武器格 */
+.weapon-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.weapon-slot {
+  aspect-ratio: 1;
+  background: #e9dec9;
+  border: 3px dashed var(--border-dark);
+  border-radius: 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+  transition: all var(--transition-fast);
+  box-shadow: inset 0 4px 6px rgba(74, 46, 27, 0.15);
+}
+
+.weapon-slot.active {
+  border-style: solid;
+  background: #ffffff;
+  box-shadow: 0 4px 0 var(--border-dark);
+}
+
+.weapon-slot:active {
+  cursor: grabbing;
+}
+
+.slot-icon {
+  font-size: 2rem;
+}
+
+.slot-quality-dot {
+  position: absolute;
+  bottom: 8px;
+  font-size: 0.7rem;
+  background: #fdf6ec;
+  border: 2px solid var(--border-dark);
+  color: var(--text-primary);
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.slot-empty-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* 拖拽重叠指示器 */
+.weapon-slot.drag-over {
+  background: #ffeac7 !important;
+  border-color: #ff9000 !important;
+  transform: scale(1.05);
+}
+
+/* 购入的道具清单容器 */
+.items-list-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  padding: 12px;
+  background: #e9dec9;
+  border: 3px solid var(--border-dark);
+  border-radius: 16px;
+  box-shadow: inset 0 4px 6px rgba(74, 46, 27, 0.15);
+}
+
+.shop-item-badge {
+  background: #ffffff;
+  border: 2px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 0 var(--border-dark);
+}
+
+/* 商店底部 */
+.shop-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.harvest-stats {
+  font-size: 0.9rem;
+  color: var(--q2-green);
+  font-weight: 600;
+}
+
+/* =======================================================
+ * 5. 结算/游戏结束界面 (GameOver Screen)
+ * ======================================================= */
+#gameover-screen {
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(13, 17, 23, 0.8) 0%, rgba(13, 17, 23, 0.98) 100%);
+}
+
+.gameover-card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.gameover-header {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.gameover-sub {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-top: -10px;
+}
+
+.gameover-stats {
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+
+.stat-row span:last-child {
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.gameover-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gameover-actions .btn {
+  width: 100%;
+}
+
+/* =======================================================
+ * 6. 动画特效及响应式适配
+ * ======================================================= */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 针对手机窄屏的适配调整 */
+@media (max-width: 600px) {
+  .ui-screen {
+    padding: 12px;
+  }
+
+  .game-title {
+    font-size: 2.2rem;
+  }
+
+  .main-menu-card {
+    gap: 15px;
+  }
+
+  .character-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .shop-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .goods-grid {
+    grid-template-columns: 1fr;
+    flex: none;
+  }
+
+  .weapon-slots-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
