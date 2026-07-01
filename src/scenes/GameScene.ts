@@ -293,6 +293,7 @@ export class GameScene extends Phaser.Scene {
     // 自动装备该角色的初始武器
     const charConfig = CHARACTER_DATABASE[charId];
     this.weaponSystem.equipWeapon(charConfig.initialWeaponId as WeaponId, WeaponQuality.WHITE, 0);
+    this.updatePlayerWeaponModifiers();
 
     // 注册玩家属性回调
     this.player.registerCallbacks(
@@ -1473,7 +1474,7 @@ export class GameScene extends Phaser.Scene {
     this.shopMarketItems.splice(index, 1);
     this.overlayManager.toast(`购买成功：${WEAPON_DATABASE[weaponId].name}`);
 
-    this.updateShieldPassiveModifiers();
+    this.updatePlayerWeaponModifiers();
     this.openShopScreen();
   }
 
@@ -1539,11 +1540,12 @@ export class GameScene extends Phaser.Scene {
       this.overlayManager.toast('武器位置交换');
     }
 
-    this.updateShieldPassiveModifiers();
+    this.updatePlayerWeaponModifiers();
     this.openShopScreen();
   }
 
-  private updateShieldPassiveModifiers() {
+  private updatePlayerWeaponModifiers() {
+    // 1. 更新石制大盾被动护甲
     this.player.attributeSystem.removeModifiersByPrefix('weapon_shield_passive');
     const extraArmor = this.weaponSystem.getPassiveAttributeModifiers().armor;
     if (extraArmor > 0) {
@@ -1554,6 +1556,12 @@ export class GameScene extends Phaser.Scene {
         mulVal: 0
       });
     }
+
+    // 2. 更新武器羁绊属性
+    const activeSynergies = this.weaponSystem.getActiveSynergies();
+    this.player.applySynergyModifiers(activeSynergies);
+
+    this.syncHUD();
   }
 
   private startNextWave() {
