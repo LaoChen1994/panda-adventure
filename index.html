@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>熊猫探险 - 国风割草解压肉鸽手游</title>
+  <!-- Google Fonts - Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/ui/style.css">
+</head>
+<body>
+  <!-- Phaser 3 渲染容器 -->
+  <div id="game-container"></div>
+
+  <!-- HTML5 DOM 游戏 UI 容器层 -->
+  <div id="ui-container">
+    <!-- 主界面/主菜单 -->
+    <div id="menu-screen" class="ui-screen active">
+      <div class="glass-card main-menu-card">
+        <h1 class="game-title">熊猫探险</h1>
+        <p class="game-subtitle">PANDA EXPEDITION</p>
+        <div class="character-selector">
+          <h3>选择你的熊猫大师</h3>
+          <div class="character-grid" id="char-grid"></div>
+        </div>
+        <div class="character-info-box" id="char-info">
+          <!-- 动态载入角色属性与被动 -->
+        </div>
+        <button id="start-game-btn" class="btn btn-primary btn-large">开始探险</button>
+      </div>
+    </div>
+
+    <!-- 战斗 HUD 界面 -->
+    <div id="hud-screen" class="ui-screen">
+      <!-- 顶部全局经验条 -->
+      <div class="global-xp-container">
+        <div id="hud-xp-fill" class="global-xp-fill" style="width: 0%"></div>
+      </div>
+      <div class="hud-top">
+        <div class="hud-left">
+          <div class="level-indicator">Lv.<span id="hud-level">1</span> <span id="hud-xp-text" class="xp-text-indicator">(0/10)</span></div>
+        </div>
+        <div class="hud-center">
+          <div class="wave-timer"><span id="hud-wave-text">WAVE 1</span> - <span id="hud-timer">45s</span></div>
+        </div>
+        <div class="hud-right">
+          <div class="gold-count">🎍 <span id="hud-gold">0</span></div>
+        </div>
+      </div>
+
+      <!-- 属性简易面板按钮 -->
+      <button id="toggle-stats-btn" class="hud-stats-btn">📊 属性</button>
+
+      <!-- 属性面板遮罩与卡片 (全屏) -->
+      <div id="stats-drawer" class="stats-drawer-overlay">
+        <div class="glass-card stats-drawer-card">
+          <button class="stats-close-btn" id="close-stats-btn">×</button>
+          <h3>熊猫大师面板</h3>
+          <div class="stats-list" id="hud-stats-list"></div>
+        </div>
+      </div>
+
+      <!-- 底部摇杆区域提示（用于非移动端指引） -->
+      <div class="mobile-tip">拖拽屏幕移动熊猫 | WASD 或键盘方向键也可操控</div>
+
+      <!-- 武器显示面板 -->
+      <div class="hud-weapons" id="hud-weapons-list"></div>
+    </div>
+
+    <!-- 升级天赋选择弹窗 (4选1) -->
+    <div id="levelup-screen" class="ui-screen">
+      <div class="glass-card overlay-card">
+        <h2 class="screen-title text-gold animate-glow">等级提升！</h2>
+        <p class="screen-desc">请选择一项属性强化你的熊猫</p>
+        <div class="options-container" id="levelup-options">
+          <!-- 动态渲染 4 个选项 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 商店/交易与合成界面 -->
+    <div id="shop-screen" class="ui-screen">
+      <div class="shop-container">
+        <!-- 顶部：波次结算与钱包 -->
+        <div class="shop-header glass-card">
+          <div>
+            <h2 id="shop-wave-title">WAVE 1 完成</h2>
+            <p class="text-muted">收获阶段：购买装备并拖拽合成</p>
+          </div>
+          <div class="shop-wallet">
+            🎍 <span id="shop-gold">0</span>
+          </div>
+        </div>
+
+        <!-- 中部左右布局 -->
+        <div class="shop-body">
+          <!-- 左侧：商店在售物品 -->
+          <div class="shop-goods-section">
+            <h3 class="section-title">竹林集市</h3>
+            <div class="goods-grid" id="shop-goods-grid">
+              <!-- 动态载入 4 个商品 -->
+            </div>
+            <div class="shop-actions">
+              <button id="shop-reroll-btn" class="btn btn-secondary">
+                🔄 刷新 (<span id="reroll-cost">2</span> 🎍)
+              </button>
+            </div>
+          </div>
+
+          <!-- 右侧：玩家现有装备与属性 -->
+          <div class="player-inventory-section glass-card">
+            <h3 class="section-title">已装备武器 (最多6件 - 拖拽相同品质融合)</h3>
+            <div class="weapon-slots-grid" id="shop-weapons-grid">
+              <!-- 6个武器格 -->
+            </div>
+
+            <h3 class="section-title" style="margin-top: 20px;">已拥有道具</h3>
+            <div class="items-list-container" id="shop-items-list">
+              <!-- 已购道具列表 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部：准备下一波 -->
+        <div class="shop-footer">
+          <div class="harvest-stats">
+            <span id="shop-harvest-income">+0 🎍 收获值产出</span>
+          </div>
+          <button id="shop-next-wave-btn" class="btn btn-primary btn-large">进入下一波</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 结算与广告复活界面 -->
+    <div id="gameover-screen" class="ui-screen">
+      <div class="glass-card overlay-card gameover-card">
+        <h1 id="gameover-title" class="gameover-header text-red">探险中止</h1>
+        <p class="gameover-sub">你在第 <span id="gameover-wave">1</span> 波倒下了</p>
+
+        <!-- 局内统计 -->
+        <div class="gameover-stats">
+          <div class="stat-row"><span>存活时间:</span> <span id="stat-time">0s</span></div>
+          <div class="stat-row"><span>消灭怪物:</span> <span id="stat-kills">0</span></div>
+          <div class="stat-row"><span>拾取金币:</span> <span id="stat-coins">0</span></div>
+        </div>
+
+        <!-- 操作区 -->
+        <div class="gameover-actions">
+          <button id="revive-btn" class="btn btn-secondary btn-large">
+            📺 观看广告复活 (剩 1 次)
+          </button>
+          <button id="double-coins-btn" class="btn btn-primary btn-large">
+            📺 观看广告双倍金币结算
+          </button>
+          <button id="restart-game-btn" class="btn btn-secondary">
+            返回主界面
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主程序入口 -->
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
