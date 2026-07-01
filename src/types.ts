@@ -153,3 +153,25 @@ export interface GameStatsRecord {
   kills: number;
   goldEarned: number;
 }
+
+// 武器羁绊系统相关类型
+export interface SynergyLevelConfig {
+  count: number;
+  modifiers: Record<string, number>;
+}
+
+export interface SynergyConfig {
+  tag: string;
+  name: string;
+  levels: SynergyLevelConfig[];
+}
+
+export interface ActiveSynergyInfo {
+  tagKey: string;
+  name: string;
+  tag: string;
+  currentCount: number;
+  level: number; // 0, 1, 2, 3 等档位，0 表示未激活
+  activeModifiers: Record<string, number>;
+}
+

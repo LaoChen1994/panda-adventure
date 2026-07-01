@@ -51,10 +51,12 @@ export class GameScene extends Phaser.Scene {
     D: Phaser.Input.Keyboard.Key;
   };
 
-  // 虚拟摇杆控制变量 (移动端触屏拖拽)
+  // 虚拟摇杆控制与绘图变量 (移动端触屏拖拽)
   private dragStartX: number = 0;
   private dragStartY: number = 0;
   private isDragging: boolean = false;
+  private joystickGraphics!: Phaser.GameObjects.Graphics;
+  private joystickBasePos: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 0);
 
   // 地图背景瓦片与格板
   private mapBackground!: Phaser.GameObjects.TileSprite;
@@ -98,6 +100,11 @@ export class GameScene extends Phaser.Scene {
     this.bossIndicator.setDepth(100);
     this.bossIndicator.setScrollFactor(0);
 
+    // 初始化虚拟摇杆图形
+    this.joystickGraphics = this.add.graphics();
+    this.joystickGraphics.setDepth(200);
+    this.joystickGraphics.setScrollFactor(0);
+
     // 2. 初始化物理对象组 (开启对象池回收)
     this.enemiesGroup = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
     this.bulletsGroup = this.physics.add.group({ classType: Bullet, runChildUpdate: true });
@@ -122,12 +129,24 @@ export class GameScene extends Phaser.Scene {
       this.dragStartX = pointer.x;
       this.dragStartY = pointer.y;
       this.isDragging = true;
+      this.joystickBasePos.set(pointer.x, pointer.y);
+      this.drawJoystick(pointer.x, pointer.y, pointer.x, pointer.y);
     });
-    this.input.on('pointermove', (_pointer: Phaser.Input.Pointer) => {
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (!this.isDragging) return;
+      const distance = Phaser.Math.Distance.Between(this.joystickBasePos.x, this.joystickBasePos.y, pointer.x, pointer.y);
+      const angle = Phaser.Math.Angle.Between(this.joystickBasePos.x, this.joystickBasePos.y, pointer.x, pointer.y);
+      let targetX = pointer.x;
+      let targetY = pointer.y;
+      if (distance > 50) {
+        targetX = this.joystickBasePos.x + Math.cos(angle) * 50;
+        targetY = this.joystickBasePos.y + Math.sin(angle) * 50;
+      }
+      this.drawJoystick(this.joystickBasePos.x, this.joystickBasePos.y, targetX, targetY);
     });
     this.input.on('pointerup', () => {
       this.isDragging = false;
+      this.joystickGraphics.clear();
     });
 
     // 5. 绑定全局核心事件总线
@@ -293,6 +312,7 @@ export class GameScene extends Phaser.Scene {
     // 自动装备该角色的初始武器
     const charConfig = CHARACTER_DATABASE[charId];
     this.weaponSystem.equipWeapon(charConfig.initialWeaponId as WeaponId, WeaponQuality.WHITE, 0);
+    this.updatePlayerWeaponModifiers();
 
     // 注册玩家属性回调
     this.player.registerCallbacks(
@@ -1473,7 +1493,7 @@ export class GameScene extends Phaser.Scene {
     this.shopMarketItems.splice(index, 1);
     this.overlayManager.toast(`购买成功：${WEAPON_DATABASE[weaponId].name}`);
 
-    this.updateShieldPassiveModifiers();
+    this.updatePlayerWeaponModifiers();
     this.openShopScreen();
   }
 
@@ -1539,11 +1559,12 @@ export class GameScene extends Phaser.Scene {
       this.overlayManager.toast('武器位置交换');
     }
 
-    this.updateShieldPassiveModifiers();
+    this.updatePlayerWeaponModifiers();
     this.openShopScreen();
   }
 
-  private updateShieldPassiveModifiers() {
+  private updatePlayerWeaponModifiers() {
+    // 1. 更新石制大盾被动护甲
     this.player.attributeSystem.removeModifiersByPrefix('weapon_shield_passive');
     const extraArmor = this.weaponSystem.getPassiveAttributeModifiers().armor;
     if (extraArmor > 0) {
@@ -1554,6 +1575,12 @@ export class GameScene extends Phaser.Scene {
         mulVal: 0
       });
     }
+
+    // 2. 更新武器羁绊属性
+    const activeSynergies = this.weaponSystem.getActiveSynergies();
+    this.player.applySynergyModifiers(activeSynergies);
+
+    this.syncHUD();
   }
 
   private startNextWave() {
@@ -1716,6 +1743,20 @@ export class GameScene extends Phaser.Scene {
       const coinsNode = document.getElementById('stat-coins');
       if (coinsNode) coinsNode.innerText = this.totalGoldCollected.toString();
     }, 800);
+  }
+
+  private drawJoystick(bx: number, by: number, kx: number, ky: number) {
+    this.joystickGraphics.clear();
+
+    // 1. 绘制摇杆外层圆形基底 (半透明灰色底座，白色线圈)
+    this.joystickGraphics.fillStyle(0xffffff, 0.12);
+    this.joystickGraphics.lineStyle(2, 0xffffff, 0.4);
+    this.joystickGraphics.fillCircle(bx, by, 50);
+    this.joystickGraphics.strokeCircle(bx, by, 50);
+
+    // 2. 绘制内层操纵摇杆帽 (不透明度更高的白色摇杆)
+    this.joystickGraphics.fillStyle(0xffffff, 0.45);
+    this.joystickGraphics.fillCircle(kx, ky, 20);
   }
 
   private restartGame() {

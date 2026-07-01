@@ -1,6 +1,6 @@
 import { CharacterId, EquippedWeapon, ItemConfig, WeaponQuality, WeaponId } from '../types';
 import { CHARACTER_DATABASE } from '../entities/Player';
-import { WEAPON_DATABASE } from '../systems/WeaponSystem';
+import { WEAPON_DATABASE, SYNERGY_DATABASE } from '../systems/WeaponSystem';
 
 /**
  * 混合 UI 叠层管理器 (负责 HTML5 DOM 与 Phaser 的数据交互与面板更新)
@@ -235,6 +235,10 @@ export class OverlayManager {
     // 更新属性面板
     this.updateStatsDrawer(data.hp, data.maxHp, data.shield, data.attributes);
 
+    // 计算并更新羁绊面板
+    const synergies = this.calculateActiveSynergies(data.weapons);
+    this.updateSynergyList(synergies);
+
     // 更新底部武器列表
     const weaponsList = document.getElementById('hud-weapons-list');
     if (weaponsList) {
@@ -323,6 +327,94 @@ export class OverlayManager {
     }
 
     list.innerHTML = html;
+  }
+
+  private calculateActiveSynergies(weapons: (EquippedWeapon | null)[]) {
+    const counts: Record<string, number> = {};
+    weapons.forEach(eq => {
+      if (!eq) return;
+      const dbEntry = WEAPON_DATABASE[eq.weaponId];
+      if (!dbEntry || !dbEntry.tags) return;
+      
+      dbEntry.tags.forEach(tag => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+    });
+
+    const result: any[] = [];
+    for (const [key, config] of Object.entries(SYNERGY_DATABASE)) {
+      const tagCount = counts[config.tag] || 0;
+      
+      let activeLevel = 0;
+      let activeModifiers: Record<string, number> = {};
+
+      for (let i = 0; i < config.levels.length; i++) {
+        if (tagCount >= config.levels[i].count) {
+          activeLevel = i + 1;
+          activeModifiers = config.levels[i].modifiers;
+        }
+      }
+
+      if (tagCount > 0) {
+        result.push({
+          tagKey: key,
+          name: config.name,
+          tag: config.tag,
+          currentCount: tagCount,
+          level: activeLevel,
+          activeModifiers
+        });
+      }
+    }
+    return result;
+  }
+
+  private updateSynergyList(synergies: any[]) {
+    const listNode = document.getElementById('hud-synergy-list');
+    if (!listNode) return;
+    
+    listNode.innerHTML = '';
+    
+    // 只展示件数大于 0 的标签
+    const activeSyns = synergies.filter(s => s.currentCount > 0);
+    
+    if (activeSyns.length === 0) {
+      listNode.innerHTML = `<div style="color: #666; font-size: 0.8rem; text-align: center; padding: 10px;">暂无武器羁绊激活</div>`;
+      return;
+    }
+    
+    activeSyns.forEach(syn => {
+      const card = document.createElement('div');
+      card.className = `synergy-card lvl-${syn.level}`;
+      
+      // 解析属性加成文案
+      let effectsText = '未激活加成';
+      if (syn.level > 0) {
+        effectsText = Object.entries(syn.activeModifiers)
+          .map(([key, val]) => {
+            const nameMap: Record<string, string> = {
+              hpMax: '最大生命', hpRegen: '生命再生', lifeSteal: '吸血率',
+              damageModifier: '伤害', meleeDmg: '近战伤害', rangedDmg: '远程伤害',
+              engineering: '工程学', attackSpeed: '攻速', critChance: '暴击率',
+              speed: '移速', range: '范围', armor: '护甲', dodge: '闪避率',
+              luck: '幸运', harvest: '收获', xpGainModifier: '经验修正'
+            };
+            const name = nameMap[key] || key;
+            const isPercent = key === 'damageModifier' || key === 'attackSpeed' || key === 'dodge' || key === 'xpGainModifier';
+            return `+${val}${isPercent ? '%' : ''}${name}`;
+          })
+          .join(', ');
+      }
+      
+      card.innerHTML = `
+        <div>
+          <span class="synergy-name">${syn.name}</span>
+          <span class="synergy-count-badge">${syn.currentCount}件</span>
+        </div>
+        <div class="synergy-effects" style="font-size: 0.75rem; color: ${syn.level > 0 ? '#fff' : '#666'};">${effectsText}</div>
+      `;
+      listNode.appendChild(card);
+    });
   }
 
   // =======================================================

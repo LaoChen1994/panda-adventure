@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { AttributeSystem } from '../systems/AttributeSystem';
-import { CharacterId, CharacterConfig, PlayerAttributes } from '../types';
+import { CharacterId, CharacterConfig, PlayerAttributes, ActiveSynergyInfo } from '../types';
 
 // 6个角色配置表定义
 export const CHARACTER_DATABASE: Record<CharacterId, CharacterConfig> = {
@@ -569,6 +569,40 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     });
   }
+  /**
+   * 应用武器羁绊属性增益
+   */
+  public applySynergyModifiers(activeSynergies: ActiveSynergyInfo[]) {
+    // 1. 清除原有的以 synergy_ 开头的羁绊属性修饰符
+    this.attributeSystem.removeModifiersByPrefix('synergy_');
+
+    // 2. 挂载当前生效的羁绊增益
+    activeSynergies.forEach(syn => {
+      if (syn.level <= 0) return; // 未满足最低件数不生效
+      
+      Object.entries(syn.activeModifiers).forEach(([attrKey, value]) => {
+        // 百分比改变量加到 mulVal，固定数值加到 addVal
+        const isPercent = attrKey === 'damageModifier' || attrKey === 'attackSpeed' || attrKey === 'dodge' || attrKey === 'xpGainModifier';
+        
+        this.attributeSystem.addModifier({
+          id: `synergy_${syn.tagKey}`,
+          attribute: attrKey as keyof PlayerAttributes,
+          addVal: isPercent ? 0 : value,
+          mulVal: isPercent ? (value / 100) : 0
+        });
+      });
+    });
+
+    // 3. 校验并约束当前血量不超过最大生命上限
+    const maxHp = this.getMaxHp();
+    if (this.hp > maxHp) {
+      this.hp = maxHp;
+    }
+    
+    // 触发 HUD UI 数据重绘
+    this.onStatsChanged();
+  }
+
   /**
    * 销毁清理
    */
