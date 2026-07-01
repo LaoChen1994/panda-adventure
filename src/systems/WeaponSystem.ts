@@ -1,4 +1,64 @@
-import { WeaponId, WeaponConfig, WeaponQuality, EquippedWeapon, WeaponStats } from '../types';
+import { WeaponId, WeaponConfig, WeaponQuality, EquippedWeapon, WeaponStats, SynergyConfig, ActiveSynergyInfo } from '../types';
+
+/**
+ * 武器羁绊数据库定义
+ */
+export const SYNERGY_DATABASE: Record<string, SynergyConfig> = {
+  melee: {
+    tag: '近战',
+    name: '近战大师',
+    levels: [
+      { count: 2, modifiers: { meleeDmg: 3 } },
+      { count: 4, modifiers: { meleeDmg: 8, critChance: 5 } },
+      { count: 6, modifiers: { meleeDmg: 15, critChance: 10, armor: 5 } }
+    ]
+  },
+  ranged: {
+    tag: '远程',
+    name: '百步穿杨',
+    levels: [
+      { count: 2, modifiers: { rangedDmg: 3 } },
+      { count: 4, modifiers: { rangedDmg: 8, range: 30 } },
+      { count: 6, modifiers: { rangedDmg: 15, range: 60, attackSpeed: 10 } }
+    ]
+  },
+  natural: {
+    tag: '自然',
+    name: '万物苏生',
+    levels: [
+      { count: 2, modifiers: { hpMax: 10 } },
+      { count: 4, modifiers: { hpMax: 25, hpRegen: 3 } },
+      { count: 6, modifiers: { hpMax: 50, hpRegen: 8, dodge: 5 } }
+    ]
+  },
+  engineering: {
+    tag: '工程',
+    name: '墨家机关',
+    levels: [
+      { count: 2, modifiers: { engineering: 5 } },
+      { count: 4, modifiers: { engineering: 15, hpMax: 5 } },
+      { count: 6, modifiers: { engineering: 30, hpMax: 15, armor: 5 } }
+    ]
+  },
+  wealth: {
+    tag: '财富',
+    name: '利滚利',
+    levels: [
+      { count: 2, modifiers: { harvest: 5 } },
+      { count: 4, modifiers: { harvest: 15, xpGainModifier: 5 } },
+      { count: 6, modifiers: { harvest: 30, xpGainModifier: 15, luck: 10 } }
+    ]
+  },
+  magic: {
+    tag: '魔法',
+    name: '八卦乾坤',
+    levels: [
+      { count: 2, modifiers: { damageModifier: 5 } },
+      { count: 4, modifiers: { damageModifier: 15, lifeSteal: 2 } },
+      { count: 6, modifiers: { damageModifier: 30, lifeSteal: 5 } }
+    ]
+  }
+};
 
 /**
  * 武器基础配置字典
@@ -284,4 +344,58 @@ export class WeaponSystem {
     this.equippedSlots.fill(null);
     this.cooldowns.fill(0);
   }
+
+  /**
+   * 统计所有已装备武器的标签数量
+   */
+  private countActiveTags(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    this.equippedSlots.forEach(eq => {
+      if (!eq) return;
+      const dbEntry = WEAPON_DATABASE[eq.weaponId];
+      if (!dbEntry || !dbEntry.tags) return;
+      
+      dbEntry.tags.forEach(tag => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+    });
+    return counts;
+  }
+
+  /**
+   * 获取当前全部激活的羁绊和属性修饰器
+   */
+  public getActiveSynergies(): ActiveSynergyInfo[] {
+    const counts = this.countActiveTags();
+    const result: ActiveSynergyInfo[] = [];
+
+    for (const [key, config] of Object.entries(SYNERGY_DATABASE)) {
+      const tagCount = counts[config.tag] || 0;
+      
+      // 找出符合当前计数的最大激活等级
+      let activeLevel = 0;
+      let activeModifiers: Record<string, number> = {};
+
+      for (let i = 0; i < config.levels.length; i++) {
+        if (tagCount >= config.levels[i].count) {
+          activeLevel = i + 1;
+          activeModifiers = config.levels[i].modifiers;
+        }
+      }
+
+      if (tagCount > 0) {
+        result.push({
+          tagKey: key,
+          name: config.name,
+          tag: config.tag,
+          currentCount: tagCount,
+          level: activeLevel,
+          activeModifiers
+        });
+      }
+    }
+
+    return result;
+  }
 }
+
