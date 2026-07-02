@@ -23,21 +23,27 @@ export class BootScene extends Phaser.Scene {
     });
     loadingText.setOrigin(0.5);
 
-    const v = '?v=2';
-    // 1. 加载真实的像素艺术 PNG 资产，成功后覆盖占位图键值
+    const v = '?v=4';
+    // 1. 加载真实的像素艺术 PNG 资产，包含静态头像以及逐帧行走动画图
     this.load.image('panda_default', 'assets/characters/panda_default.png' + v);
-    this.load.image('kungfu_panda', 'assets/characters/kungfu_panda.png' + v);
-    this.load.spritesheet('kungfu_panda_walk', 'assets/characters/kungfu_walk_sheet.png' + v, { frameWidth: 256, frameHeight: 256 });
-    this.load.image('bamboo_archer', 'assets/characters/bamboo_archer.png' + v);
-    this.load.spritesheet('bamboo_archer_walk', 'assets/characters/archer_walk_sheet.png' + v, { frameWidth: 256, frameHeight: 256 });
-    this.load.image('wealth_panda', 'assets/characters/wealth_panda.png' + v);
-    this.load.spritesheet('wealth_panda_walk', 'assets/characters/wealth_walk_sheet.png' + v, { frameWidth: 256, frameHeight: 256 });
-    this.load.image('iron_shield', 'assets/characters/iron_shield.png' + v);
-    this.load.spritesheet('iron_shield_walk', 'assets/characters/shield_walk_sheet.png' + v, { frameWidth: 256, frameHeight: 256 });
-    this.load.image('drunk_master', 'assets/characters/drunk_master.png' + v);
-    this.load.spritesheet('drunk_master_walk', 'assets/characters/drunk_walk_sheet.png' + v, { frameWidth: 256, frameHeight: 256 });
-    this.load.image('gear_mechanic', 'assets/characters/gear_mechanic.png' + v);
-    this.load.spritesheet('gear_mechanic_walk', 'assets/characters/mechanic_walk_sheet.png' + v, { frameWidth: 256, frameHeight: 256 });
+
+    const characterLoadingConfigs = [
+      { id: 'kungfu_panda', frames: 6 },
+      { id: 'bamboo_archer', frames: 6 },
+      { id: 'wealth_panda', frames: 9 },
+      { id: 'iron_shield', frames: 9 },
+      { id: 'drunk_master', frames: 9 },
+      { id: 'gear_mechanic', frames: 9 }
+    ];
+
+    characterLoadingConfigs.forEach(char => {
+      // 加载静态选择界面立绘/首帧头像
+      this.load.image(char.id, `assets/characters/${char.id}.png` + v);
+      // 循环加载逐帧行走动画图片
+      for (let i = 0; i < char.frames; i++) {
+        this.load.image(`${char.id}_walk_${i}`, `assets/characters/${char.id}_walk_${i}.png` + v);
+      }
+    });
 
     this.load.image('enemy_caterpillar', 'assets/enemies/caterpillar.png' + v);
     this.load.image('enemy_rabbit', 'assets/enemies/rabbit.png' + v);
@@ -119,26 +125,27 @@ export class BootScene extends Phaser.Scene {
     // ==========================================
     // 1. 玩家占位 (绿色大圆形 + 黑色耳朵)
     // ==========================================
-    const generateWalkFallback = (key: string, frames: number) => {
-      if (!this.textures.exists(key)) {
-        g.clear();
-        for (let i = 0; i < frames; i++) {
+    const generateWalkFallback = (charId: string, frames: number) => {
+      for (let i = 0; i < frames; i++) {
+        const key = `${charId}_walk_${i}`;
+        if (!this.textures.exists(key)) {
+          g.clear();
           g.fillStyle(0xffffff, 1);
-          g.fillCircle(i * 256 + 128, 128, 64);
+          g.fillCircle(128, 128, 64);
           g.fillStyle(0x111111, 1);
-          g.fillCircle(i * 256 + 128 - 24, 128 - 24, 20); // 左耳
-          g.fillCircle(i * 256 + 128 + 24, 128 - 24, 20); // 右耳
+          g.fillCircle(128 - 24, 128 - 24, 20); // 左耳
+          g.fillCircle(128 + 24, 128 - 24, 20); // 右耳
+          g.generateTexture(key, 256, 256);
         }
-        g.generateTexture(key, frames * 256, 256);
       }
     };
 
-    generateWalkFallback('kungfu_panda_walk', 6);
-    generateWalkFallback('bamboo_archer_walk', 6);
-    generateWalkFallback('wealth_panda_walk', 9);
-    generateWalkFallback('iron_shield_walk', 9);
-    generateWalkFallback('drunk_master_walk', 9);
-    generateWalkFallback('gear_mechanic_walk', 9);
+    generateWalkFallback('kungfu_panda', 6);
+    generateWalkFallback('bamboo_archer', 6);
+    generateWalkFallback('wealth_panda', 9);
+    generateWalkFallback('iron_shield', 9);
+    generateWalkFallback('drunk_master', 9);
+    generateWalkFallback('gear_mechanic', 9);
 
     const pandaKeys = ['panda_default', 'kungfu_panda', 'bamboo_archer', 'wealth_panda', 'iron_shield', 'drunk_master', 'gear_mechanic'];
     pandaKeys.forEach(key => {

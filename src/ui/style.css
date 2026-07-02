@@ -253,6 +253,7 @@ body, html {
   align-items: center;
   font-size: 1.5rem;
   transition: all var(--transition-fast);
+  overflow: hidden;
 }
 
 .char-slot:hover {
