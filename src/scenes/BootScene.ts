@@ -23,6 +23,15 @@ export class BootScene extends Phaser.Scene {
     });
     loadingText.setOrigin(0.5);
 
+    this.load.on('progress', (value: number) => {
+      const percentage = Math.round(value * 100);
+      loadingText.setText(`探险队集结中 (${percentage}%)...`);
+      const overlay = this.game.registry.get('overlayManager') as any;
+      if (overlay && typeof overlay.updateLoadingProgress === 'function') {
+        overlay.updateLoadingProgress(percentage);
+      }
+    });
+
     const v = '?v=4';
     // 1. 加载真实的像素艺术 PNG 资产，包含静态头像以及逐帧行走动画图
     this.load.image('panda_default', 'assets/characters/panda_default.png' + v);
