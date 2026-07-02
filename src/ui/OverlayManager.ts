@@ -76,6 +76,16 @@ export class OverlayManager {
   }
 
   /**
+   * 更新开始按钮的加载进度百分比
+   */
+  public updateLoadingProgress(progress: number) {
+    const startBtn = document.getElementById('start-game-btn') as HTMLButtonElement;
+    if (startBtn && startBtn.disabled) {
+      startBtn.innerText = `探险队集结中 (${progress}%)...`;
+    }
+  }
+
+  /**
    * 设置游戏实例
    */
   public setGameInstance(_game: any) {
