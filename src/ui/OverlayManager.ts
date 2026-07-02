@@ -16,6 +16,7 @@ export class OverlayManager {
   };
 
   private activeScreenId: string = 'menu-screen';
+  private isDOMInitialized: boolean = false;
   private selectedCharacterId: CharacterId = 'kungfu_panda';
 
   // 拖拽数据缓存
@@ -34,12 +35,13 @@ export class OverlayManager {
   private onRestartGameCallback: () => void = () => {};
 
   constructor() {
-    this.initDOMEvents();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => this.initDOMEvents());
+    } else {
+      this.initDOMEvents();
+    }
   }
 
-  /**
-   * 注册控制回调
-   */
   public registerHandlers(handlers: {
     onStartGame: (charId: CharacterId) => void;
     onLevelUpSelected: (optionIndex: number) => void;
@@ -52,6 +54,7 @@ export class OverlayManager {
     onDoubleCoins: () => void;
     onRestartGame: () => void;
   }) {
+    this.initDOMEvents();
     this.onStartGameCallback = handlers.onStartGame;
     this.onLevelUpSelectedCallback = handlers.onLevelUpSelected;
     this.onShopBuyItemCallback = handlers.onShopBuyItem;
@@ -107,10 +110,10 @@ export class OverlayManager {
     }
   }
 
-  /**
-   * 初始化主界面的 DOM 结构与静态事件
-   */
   private initDOMEvents() {
+    if (this.isDOMInitialized) return;
+    this.isDOMInitialized = true;
+
     // 1. 初始化主菜单熊猫角色列表
     const charGrid = document.getElementById('char-grid');
     if (charGrid) {
