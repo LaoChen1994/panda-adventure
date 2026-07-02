@@ -62,6 +62,14 @@ export class OverlayManager {
     this.onReviveCallback = handlers.onRevive;
     this.onDoubleCoinsCallback = handlers.onDoubleCoins;
     this.onRestartGameCallback = handlers.onRestartGame;
+
+    // 当游戏引擎加载完并注册控制回调时，解除开始按钮的禁用状态
+    const startBtn = document.getElementById('start-game-btn') as HTMLButtonElement;
+    if (startBtn) {
+      startBtn.disabled = false;
+      startBtn.style.opacity = '1';
+      startBtn.innerText = '开始探险';
+    }
   }
 
   /**
@@ -87,6 +95,16 @@ export class OverlayManager {
       next.classList.add('active');
       this.activeScreenId = screenId;
     }
+
+    // 动态调整 ui-container 的 pointer-events 属性以解决 WebKit (iOS Safari) 的点触穿透与屏蔽 Bug
+    const uiContainer = document.getElementById('ui-container');
+    if (uiContainer) {
+      if (screenId === 'hud-screen') {
+        uiContainer.style.pointerEvents = 'none'; // 战斗 HUD 模式下，事件需要穿透到 Phaser 游戏画布
+      } else {
+        uiContainer.style.pointerEvents = 'auto'; // 主菜单、商店等弹窗模式下，捕获事件以保证按钮可点击
+      }
+    }
   }
 
   /**
@@ -102,8 +120,8 @@ export class OverlayManager {
         const slot = document.createElement('div');
         slot.className = `char-slot ${charId === this.selectedCharacterId ? 'selected' : ''}`;
         
-        // 使用熊猫大画立绘替代低效 Emoji
-        slot.innerHTML = `<img src="assets/characters/${charId}.png" style="width: 85%; height: 85%; object-fit: contain;" />`;
+        // 使用程序化清洗且居中对齐后的单帧 PNG 图像，并带上防爆加载容错与版本号
+        slot.innerHTML = `<img src="assets/characters/${charId}.png?v=4" style="max-width: 85%; max-height: 85%; object-fit: contain; display: block;" onerror="console.error('Failed to load avatar: ' + this.src); this.src='assets/characters/panda_default.png?v=4';" />`;
         
         slot.addEventListener('click', () => {
           this.selectCharacter(charId);
