@@ -181,12 +181,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.attributeSystem.getAttributes();
   }
 
-  /**
-   * 获取当前经验升级所需总经验
-   */
   public getRequiredXp(): number {
     const lvl = this.level;
-    return Math.round(5 + (lvl * 3) + (lvl * lvl * 0.5));
+    // 优化前期升级速度，新手期更温和，增大甜点区
+    return Math.round(5 + (lvl * 1.5) + (lvl * lvl * 0.2));
   }
 
   /**

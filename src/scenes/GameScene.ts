@@ -839,6 +839,10 @@ export class GameScene extends Phaser.Scene {
       delay: 100,
       repeat: 4, // 弹跳4次，共5个敌人
       callback: () => {
+        if (!currentTarget || !currentTarget.active || currentTarget.hp <= 0) {
+          chainTimer.destroy();
+          return;
+        }
         const next = this.findNearestEnemyExclude(currentTarget.x, currentTarget.y, 250, hitSet);
         if (next) {
           hitSet.add(next.x.toString() + next.y.toString());
@@ -1084,6 +1088,25 @@ export class GameScene extends Phaser.Scene {
   //            掉落物与磁吸拾取系统
   // =======================================================
 
+  private spawnCollectable(x: number, y: number, key: string, type: string, value: number = 1) {
+    if (type !== 'chest') {
+      if (this.collectablesGroup.getLength() >= 150) {
+        const oldest = this.collectablesGroup.getChildren().find(child => {
+          const item = child as Phaser.Physics.Arcade.Sprite;
+          return item.active && item.getData('type') !== 'chest';
+        });
+        if (oldest) {
+          oldest.destroy();
+        }
+      }
+    }
+    const sprite = this.physics.add.sprite(x, y, key);
+    this.collectablesGroup.add(sprite);
+    sprite.setData('type', type);
+    sprite.setData('value', value);
+    return sprite;
+  }
+
   /**
    * 怪物死亡后掉落经验宝石或金币
    */
@@ -1094,32 +1117,21 @@ export class GameScene extends Phaser.Scene {
     const isMidasRoll = hasMidas && Math.random() < 0.05;
 
     if (data.isElite) {
-      const chest = this.physics.add.sprite(data.x, data.y, 'collectable_chest');
-      this.collectablesGroup.add(chest);
-      chest.setData('type', 'chest');
+      this.spawnCollectable(data.x, data.y, 'collectable_chest', 'chest');
       return;
     }
 
     const roll = Math.random();
     
     if (isMidasRoll || roll < 0.15) {
-      const coin = this.physics.add.sprite(data.x, data.y, 'collectable_gold');
-      this.collectablesGroup.add(coin);
-      coin.setData('type', 'gold');
-      coin.setData('value', isMidasRoll ? 10 : 1);
+      this.spawnCollectable(data.x, data.y, 'collectable_gold', 'gold', isMidasRoll ? 10 : 1);
     } else {
-      const gem = this.physics.add.sprite(data.x, data.y, 'collectable_xp');
-      this.collectablesGroup.add(gem);
-      gem.setData('type', 'xp');
-      gem.setData('value', 1);
+      this.spawnCollectable(data.x, data.y, 'collectable_xp', 'xp', 1);
     }
   }
 
   private handleEnemyDropGoldOnly(x: number, y: number) {
-    const coin = this.physics.add.sprite(x, y, 'collectable_gold');
-    this.collectablesGroup.add(coin);
-    coin.setData('type', 'gold');
-    coin.setData('value', 1);
+    this.spawnCollectable(x, y, 'collectable_gold', 'gold', 1);
   }
 
   private tickCollectablesMagnet() {
@@ -1190,10 +1202,7 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < data.count; i++) {
       const ox = data.x + Phaser.Math.Between(-15, 15);
       const oy = data.y + Phaser.Math.Between(-15, 15);
-      const coin = this.physics.add.sprite(ox, oy, 'collectable_gold');
-      this.collectablesGroup.add(coin);
-      coin.setData('type', 'gold');
-      coin.setData('value', 1);
+      this.spawnCollectable(ox, oy, 'collectable_gold', 'gold', 1);
     }
   }
 
@@ -1211,10 +1220,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePetSpawnHeal(data: { x: number; y: number; healVal: number }) {
-    const shoot = this.physics.add.sprite(data.x, data.y, 'collectable_bamboo_shoot');
-    this.collectablesGroup.add(shoot);
-    shoot.setData('type', 'heal');
-    shoot.setData('value', data.healVal);
+    this.spawnCollectable(data.x, data.y, 'collectable_bamboo_shoot', 'heal', data.healVal);
   }
 
   private handlePetShootFox(data: { x: number; y: number; damage: number }) {

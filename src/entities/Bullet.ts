@@ -56,7 +56,13 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
 
     // 换纹理与重置物理包围盒
     this.setTexture(textureKey);
-    this.scene.physics.add.existing(this);
+    if (!this.body) {
+      this.scene.physics.add.existing(this);
+    } else {
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      body.enable = true;
+      body.reset(x, y);
+    }
 
     // 缩放微调 (近战挥动大，子弹小)
     if (effects.isMeleeSwing) {
