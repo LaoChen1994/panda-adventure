@@ -530,6 +530,95 @@ export class OverlayManager {
     this.showScreen('levelup-screen');
   }
 
+  /**
+   * 显示宝箱开启界面
+   */
+  public showChestScreen(
+    item: ItemConfig,
+    onEquip: () => void,
+    onSell: (gold: number) => void
+  ) {
+    const container = document.getElementById('chest-item-container');
+    if (!container) return;
+
+    const qualityColors: Record<string, string> = {
+      white: 'var(--q1-white)',
+      green: 'var(--q2-green)',
+      blue: 'var(--q3-blue)',
+      purple: 'var(--q4-purple)'
+    };
+
+    const color = qualityColors[item.quality] || 'var(--border-light)';
+    
+    const attrNames: Record<string, string> = {
+      hpMax: '最大生命值',
+      hpRegen: '生命再生',
+      lifeSteal: '生命偷取',
+      damageModifier: '伤害加成',
+      meleeDmg: '近战伤害',
+      rangedDmg: '远程伤害',
+      engineering: '工程学',
+      attackSpeed: '攻击速度',
+      critChance: '暴击率',
+      speed: '移动速度',
+      range: '攻击范围',
+      armor: '护甲值',
+      dodge: '闪避率',
+      luck: '幸运值',
+      harvest: '收获值',
+      xpGainModifier: '经验修正'
+    };
+
+    let modifiersText = '';
+    for (const attrKey in item.modifiers) {
+      const data = (item.modifiers as any)[attrKey];
+      if (data) {
+        let valText = '';
+        if (data.add !== undefined && data.add !== 0) {
+          valText = `${data.add > 0 ? '+' : ''}${data.add}`;
+          if (['lifeSteal', 'damageModifier', 'attackSpeed', 'critChance', 'speed', 'dodge', 'xpGainModifier'].includes(attrKey)) {
+            valText += '%';
+          }
+        } else if (data.mul !== undefined && data.mul !== 0) {
+          valText = `${data.mul > 0 ? '+' : ''}${Math.round(data.mul * 100)}%`;
+        }
+        modifiersText += `<div style="font-size: 0.85rem; color: #555;">${attrNames[attrKey] || attrKey}: <b style="color: ${data.add !== undefined && data.add < 0 ? '#ff3e3e' : '#2e7d32'};">${valText}</b></div>`;
+      }
+    }
+
+    container.innerHTML = `
+      <img class="chest-item-icon" src="./assets/items/${item.id}.png" style="border-color: ${color};" />
+      <h3 class="chest-item-name" style="color: ${color};">${item.name}</h3>
+      <p class="chest-item-desc" style="font-style: italic; color: #666;">"${item.desc}"</p>
+      <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; margin-top: 5px;">
+        ${modifiersText}
+      </div>
+    `;
+
+    const equipBtn = document.getElementById('chest-equip-btn') as HTMLButtonElement;
+    const sellBtn = document.getElementById('chest-sell-btn') as HTMLButtonElement;
+    const sellVal = document.getElementById('chest-sell-val');
+
+    const recycleValue = Math.round(item.price * 0.5);
+    if (sellVal) sellVal.innerText = String(recycleValue);
+
+    const newEquipBtn = equipBtn.cloneNode(true) as HTMLButtonElement;
+    const newSellBtn = sellBtn.cloneNode(true) as HTMLButtonElement;
+
+    equipBtn.parentNode?.replaceChild(newEquipBtn, equipBtn);
+    sellBtn.parentNode?.replaceChild(newSellBtn, sellBtn);
+
+    newEquipBtn.addEventListener('click', () => {
+      onEquip();
+    });
+
+    newSellBtn.addEventListener('click', () => {
+      onSell(recycleValue);
+    });
+
+    this.showScreen('chest-screen');
+  }
+
   // =======================================================
   //            商店界面更新与融合交互
   // =======================================================
