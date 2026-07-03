@@ -263,6 +263,28 @@ export class OverlayManager {
     const goldNode = document.getElementById('hud-gold');
     if (goldNode) goldNode.innerText = data.gold.toString();
 
+    // 更新永久 HP 条与护盾条
+    const hpValNode = document.getElementById('hud-hp-val');
+    if (hpValNode) {
+      if (data.shield > 0) {
+        hpValNode.innerHTML = `${data.hp}/${data.maxHp} <span style="color:#5cd8ff; font-weight:bold;">(${data.shield}🛡️)</span>`;
+      } else {
+        hpValNode.innerText = `${data.hp}/${data.maxHp}`;
+      }
+    }
+
+    const hpFill = document.getElementById('hud-hp-fill');
+    if (hpFill) {
+      const hpPercent = (data.hp / data.maxHp) * 100;
+      hpFill.style.width = `${Math.max(0, Math.min(100, hpPercent))}%`;
+    }
+
+    const shieldFill = document.getElementById('hud-shield-fill');
+    if (shieldFill) {
+      const shieldPercent = (data.shield / data.maxHp) * 100;
+      shieldFill.style.width = `${Math.max(0, Math.min(100, shieldPercent))}%`;
+    }
+
     // 更新属性面板
     this.updateStatsDrawer(data.hp, data.maxHp, data.shield, data.attributes);
 

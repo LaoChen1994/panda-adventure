@@ -328,6 +328,67 @@ body, html {
   font-weight: bold;
 }
 
+/* 顶部永久血条与护盾条 */
+.hud-hp-container {
+  position: absolute;
+  top: 70px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(13, 17, 23, 0.85);
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--border-dark);
+  z-index: 50;
+  pointer-events: auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.hp-heart {
+  font-size: 1rem;
+  filter: drop-shadow(0 0 2px rgba(255, 62, 62, 0.8));
+}
+
+.hud-hp-track {
+  width: 140px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hud-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4d4d, #ff3333);
+  width: 100%;
+  transition: width 0.15s ease-out;
+  border-radius: 6px;
+}
+
+.hud-shield-fill {
+  height: 60%;
+  background: linear-gradient(90deg, #5cd8ff, #00bfff);
+  position: absolute;
+  top: 20%;
+  left: 0;
+  width: 0%;
+  transition: width 0.15s ease-out;
+  border-radius: 3px;
+  box-shadow: 0 0 5px rgba(92, 216, 255, 0.8);
+}
+
+.hp-val-text {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  min-width: 60px;
+  text-align: right;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* 顶部 HUD 栏 */
 .hud-top {
   position: absolute;
