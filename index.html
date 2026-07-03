@@ -82,6 +82,21 @@
       </div>
     </div>
 
+    <!-- 开启宝箱弹窗 -->
+    <div id="chest-screen" class="ui-screen">
+      <div class="glass-card overlay-card" style="max-width: 400px; text-align: center;">
+        <h2 class="screen-title text-gold animate-glow">获得宝箱奖励！</h2>
+        <p class="screen-desc">在旅途中发现的远古宝箱中藏着...</p>
+        <div id="chest-item-container" class="chest-item-display" style="margin: 15px 0;">
+          <!-- 动态装填道具图标与详情 -->
+        </div>
+        <div class="chest-actions" style="display: flex; gap: 15px; justify-content: center; width: 100%;">
+          <button id="chest-equip-btn" class="btn btn-primary" style="flex: 1; padding: 12px; font-weight: bold; border-radius: 12px;">获得道具</button>
+          <button id="chest-sell-btn" class="btn btn-secondary" style="flex: 1; padding: 12px; font-weight: bold; border-radius: 12px;">卖掉换钱 (+<span id="chest-sell-val">0</span> 🎍)</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 商店/交易与合成界面 -->
     <div id="shop-screen" class="ui-screen">
       <div class="shop-container">
