@@ -29,6 +29,8 @@ export class GameScene extends Phaser.Scene {
   private activePets: Pet[] = [];
   private petsGroup!: Phaser.GameObjects.Group;
   private chestQueue: ItemConfig[] = [];
+  private pendingLevelUps: number = 0;
+  private isLevelUpActive: boolean = false;
 
   // 场景状态
   private isGameActive: boolean = false;
@@ -1643,6 +1645,16 @@ export class GameScene extends Phaser.Scene {
   private activeLevelupOptions: any[] = [];
 
   private handlePlayerLevelUp() {
+    this.pendingLevelUps++;
+    if (this.isLevelUpActive) {
+      return; // 已经在升级选择中，不中断当前 UI
+    }
+
+    this.isLevelUpActive = true;
+    this.showNextLevelUp();
+  }
+
+  private showNextLevelUp() {
     this.physics.pause();
     this.isGameActive = false;
 
@@ -1711,7 +1723,7 @@ export class GameScene extends Phaser.Scene {
     const opt = this.activeLevelupOptions[idx];
     if (!opt) return;
 
-    const modId = `levelup_lvl_${this.player.level - 1}_${opt.attribute}`;
+    const modId = `levelup_lvl_${this.player.level - this.pendingLevelUps}_${opt.attribute}`;
     
     this.player.attributeSystem.addModifier({
       id: modId,
@@ -1722,9 +1734,16 @@ export class GameScene extends Phaser.Scene {
 
     this.overlayManager.toast(`属性提升：${opt.attribute} +${opt.addVal}`);
 
-    this.isGameActive = true;
-    this.physics.resume();
-    this.overlayManager.showScreen('hud-screen');
+    this.pendingLevelUps--;
+    if (this.pendingLevelUps > 0) {
+      // 继续下一个升级选择
+      this.showNextLevelUp();
+    } else {
+      this.isLevelUpActive = false;
+      this.isGameActive = true;
+      this.physics.resume();
+      this.overlayManager.showScreen('hud-screen');
+    }
   }
 
   // =======================================================
