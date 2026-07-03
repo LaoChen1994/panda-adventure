@@ -114,6 +114,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // 护盾环绕特效精灵
   private shieldSprite: Phaser.GameObjects.Sprite | null = null;
 
+  // 角色脚下血条图形对象
+  private hpBarGraphics!: Phaser.GameObjects.Graphics;
+
   // 上次受击时间（用于无敌帧判定）
   private lastHitTime: number = 0;
 
@@ -160,6 +163,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         });
       }
     }
+
+    // 初始化角色血条画笔
+    this.hpBarGraphics = scene.add.graphics();
+    this.hpBarGraphics.setDepth(15); // 确保在武器和角色之上
   }
 
   /**
@@ -449,7 +456,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * 每帧状态更新
    */
   public updateEntity(dt: number) {
-    if (this.hp <= 0) return;
+    if (this.hp <= 0) {
+      if (this.hpBarGraphics) this.hpBarGraphics.clear();
+      return;
+    }
+
+    this.drawHpBar();
 
     // 0.5 护盾环绕特效更新
     if (this.shield > 0) {
@@ -548,6 +560,39 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
+   * 绘制角色脚下的血条与护盾条
+   */
+  private drawHpBar() {
+    if (!this.hpBarGraphics) return;
+    this.hpBarGraphics.clear();
+    if (this.hp <= 0) return;
+
+    const maxHp = this.getMaxHp();
+    const hpRatio = Math.max(0, Math.min(1, this.hp / maxHp));
+
+    const barWidth = 60;
+    const barHeight = 8;
+    const offsetX = this.x - barWidth / 2;
+    const offsetY = this.y + 60; // 绘在熊猫人脚下 (熊猫人贴图高度约136)
+
+    // 1. 绘制背景黑框
+    this.hpBarGraphics.fillStyle(0x000000, 0.6);
+    this.hpBarGraphics.fillRect(offsetX - 2, offsetY - 2, barWidth + 4, barHeight + 4);
+
+    // 2. 绘制血条主色（根据血量高低改变颜色：绿/黄/红）
+    const color = hpRatio > 0.5 ? 0x2ecc71 : (hpRatio > 0.25 ? 0xf1c40f : 0xe74c3c);
+    this.hpBarGraphics.fillStyle(color, 1.0);
+    this.hpBarGraphics.fillRect(offsetX, offsetY, barWidth * hpRatio, barHeight);
+
+    // 3. 绘制护盾条叠层（如果有护盾的话，显示为上层淡蓝色光条）
+    if (this.shield > 0) {
+      const shieldRatio = Math.min(1.0, this.shield / maxHp);
+      this.hpBarGraphics.fillStyle(0x5cd8ff, 0.85);
+      this.hpBarGraphics.fillRect(offsetX, offsetY + barHeight - 3, barWidth * shieldRatio, 3);
+    }
+  }
+
+  /**
    * 飘字提示辅助函数
    */
   private showFloatingText(text: string, color: string) {
@@ -609,6 +654,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * 销毁清理
    */
   public destroy(fromScene?: boolean) {
+    if (this.hpBarGraphics) {
+      this.hpBarGraphics.destroy();
+    }
     if (this.shieldSprite) {
       this.shieldSprite.destroy();
       this.shieldSprite = null;
