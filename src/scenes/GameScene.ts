@@ -28,6 +28,7 @@ export class GameScene extends Phaser.Scene {
   private summonsGroup!: Phaser.Physics.Arcade.Group;
   private activePets: Pet[] = [];
   private petsGroup!: Phaser.GameObjects.Group;
+  private chestQueue: ItemConfig[] = [];
 
   // 场景状态
   private isGameActive: boolean = false;
@@ -1376,18 +1377,43 @@ export class GameScene extends Phaser.Scene {
     }
 
     let chests = this.registry.get('chests_earned') || 0;
+    this.chestQueue = [];
     while (chests > 0) {
       chests--;
       const bonusItem = ItemSystem.getRandomShopItems(1, this.waveSystem.currentWaveNum, 999)[0];
       if (bonusItem) {
-        this.applyItemModifiers(bonusItem);
-        this.overlayManager.toast(`宝箱开启：获得 [${bonusItem.name}]`);
+        this.chestQueue.push(bonusItem);
       }
     }
     this.registry.set('chests_earned', 0);
 
-    this.rerollShopMarket();
-    this.openShopScreen();
+    this.processNextChest();
+  }
+
+  private processNextChest() {
+    if (this.chestQueue.length > 0) {
+      const item = this.chestQueue.shift();
+      if (item) {
+        this.overlayManager.showChestScreen(
+          item,
+          () => {
+            this.applyItemModifiers(item);
+            this.overlayManager.toast(`获得道具：${item.name}`);
+            this.processNextChest();
+          },
+          (goldAmount) => {
+            this.player.addGold(goldAmount);
+            this.overlayManager.toast(`已出售道具，获得 ${goldAmount} 🎍`);
+            this.processNextChest();
+          }
+        );
+      } else {
+        this.processNextChest();
+      }
+    } else {
+      this.rerollShopMarket();
+      this.openShopScreen();
+    }
   }
 
   private rerollShopMarket() {

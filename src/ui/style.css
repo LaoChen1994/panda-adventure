@@ -523,6 +523,45 @@ body, html {
   background: rgba(13, 17, 23, 0.85);
 }
 
+#chest-screen {
+  justify-content: center;
+  align-items: center;
+  background: rgba(13, 17, 23, 0.85);
+}
+
+.chest-item-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 3px dashed var(--border-dark);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+}
+
+.chest-item-icon {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  border: 3px solid var(--border-dark);
+}
+
+.chest-item-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.chest-item-desc {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
 .overlay-card {
   width: 100%;
   max-width: 480px;
