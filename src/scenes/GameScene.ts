@@ -163,6 +163,30 @@ export class GameScene extends Phaser.Scene {
     this.events.off('spawn-enemy-projectile');
     this.events.on('spawn-enemy-projectile', this.spawnEnemyProjectile, this);
 
+    this.events.off('boss-blackhole-start');
+    this.events.on('boss-blackhole-start', this.handleBossBlackhole, this);
+
+    this.events.off('boss-meteors-start');
+    this.events.on('boss-meteors-start', this.handleBossMeteors, this);
+
+    this.events.off('boss-slash-start');
+    this.events.on('boss-slash-start', this.handleBossSlash, this);
+
+    this.events.off('boss-missiles-start');
+    this.events.on('boss-missiles-start', this.handleBossMissiles, this);
+
+    this.events.off('boss-grid-start');
+    this.events.on('boss-grid-start', this.handleBossGrid, this);
+
+    this.events.off('boss-flamethrower-start');
+    this.events.on('boss-flamethrower-start', this.handleBossFlamethrower, this);
+
+    this.events.off('spawn-poison-cloud');
+    this.events.on('spawn-poison-cloud', this.handleSpawnPoisonCloud, this);
+
+    this.events.off('spawn-ground-alert');
+    this.events.on('spawn-ground-alert', this.handleSpawnGroundAlert, this);
+
     this.events.off('spawn-player-turret');
     this.events.on('spawn-player-turret', this.spawnPlayerTurret, this);
 
@@ -1005,13 +1029,244 @@ export class GameScene extends Phaser.Scene {
     bullet.setTint(0xff3300);
     this.enemyProjectilesGroup.add(bullet);
     
-    bullet.body?.setSize(12, 12);
+    // 大小判定
+    if (data.type === 'boulder' || data.type === 'earth_wave') {
+      bullet.setScale(2.0);
+      bullet.body?.setSize(24, 24);
+    } else if (data.type === 'boss_slash') {
+      bullet.setScale(4.0);
+      bullet.body?.setSize(48, 48);
+    } else {
+      bullet.body?.setSize(12, 12);
+    }
+    
     bullet.setVelocity(Math.cos(data.angle) * data.speed, Math.sin(data.angle) * data.speed);
     
     bullet.setData('damage', data.damage);
 
     this.time.delayedCall(4000, () => {
       if (bullet.active) bullet.destroy();
+    });
+  }
+
+  // =======================================================
+  //            BOSS & 精英怪特殊技能实现
+  // =======================================================
+
+  private handleBossBlackhole(data: { duration: number }) {
+    // 饕餮黑洞：在屏幕中心生成黑洞，持续吸附玩家
+    const cx = this.cameras.main.scrollX + this.cameras.main.width / 2;
+    const cy = this.cameras.main.scrollY + this.cameras.main.height / 2;
+    
+    const blackhole = this.add.graphics();
+    blackhole.fillStyle(0x000000, 0.8);
+    blackhole.lineStyle(4, 0x8800ff, 1.0);
+    blackhole.fillCircle(cx, cy, 60);
+    blackhole.strokeCircle(cx, cy, 60);
+    blackhole.setDepth(10);
+
+    const timerEvent = this.time.addEvent({
+      delay: 50,
+      loop: true,
+      callback: () => {
+        if (!this.player || !this.player.active) return;
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, cx, cy);
+        if (dist < 500) {
+          const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, cx, cy);
+          const pullForce = (500 - dist) * 0.05; // 距离越近吸力越强
+          this.player.x += Math.cos(angle) * pullForce;
+          this.player.y += Math.sin(angle) * pullForce;
+        }
+        if (dist < 60) {
+          this.player.takeDamage(10, '黑洞撕裂');
+        }
+      }
+    });
+
+    this.time.delayedCall(data.duration * 1000, () => {
+      timerEvent.destroy();
+      blackhole.destroy();
+    });
+  }
+
+  private handleBossMeteors(data: { count: number; delay: number }) {
+    // 饕餮陨石：在玩家附近随机生成多个地面警告
+    for (let i = 0; i < data.count; i++) {
+      this.time.delayedCall(i * 300, () => {
+        if (!this.player || !this.player.active) return;
+        const tx = this.player.x + Phaser.Math.Between(-250, 250);
+        const ty = this.player.y + Phaser.Math.Between(-250, 250);
+        this.handleSpawnGroundAlert({
+          x: tx, y: ty, radius: 80, delay: data.delay, damage: 45
+        });
+      });
+    }
+  }
+
+  private handleBossSlash(data: { x: number; y: number; dmg: number }) {
+    // 饕餮巨力斩：发出一个巨大的剑气
+    if (!this.player || !this.player.active) return;
+    const angle = Phaser.Math.Angle.Between(data.x, data.y, this.player.x, this.player.y);
+    this.spawnEnemyProjectile({
+      x: data.x, y: data.y, angle: angle, speed: 450, damage: data.dmg, type: 'boss_slash'
+    });
+  }
+
+  private handleBossMissiles(data: { count: number }) {
+    // 青龙飞弹：环绕生成多发子弹打向玩家
+    if (!this.player || !this.player.active) return;
+    const baseAngle = Phaser.Math.Angle.Between(this.cameras.main.centerX, this.cameras.main.centerY, this.player.x, this.player.y);
+    const step = (Math.PI * 2) / data.count;
+    
+    for (let i = 0; i < data.count; i++) {
+      const angle = baseAngle + (i * step);
+      this.spawnEnemyProjectile({
+        x: this.player.x + Math.cos(angle) * 400,
+        y: this.player.y + Math.sin(angle) * 400,
+        angle: angle + Math.PI, // 朝向中心打去
+        speed: 250,
+        damage: 20,
+        type: 'missile'
+      });
+    }
+  }
+
+  private handleBossGrid(_data: { duration: number }) {
+    // 青龙天罗地网：生成纵横交错的网格警告区
+    if (!this.player || !this.player.active) return;
+    const cx = this.player.x;
+    const cy = this.player.y;
+    
+    const lines = [
+      { x1: cx - 500, y1: cy - 100, x2: cx + 500, y2: cy - 100 },
+      { x1: cx - 500, y1: cy + 100, x2: cx + 500, y2: cy + 100 },
+      { x1: cx - 100, y1: cy - 500, x2: cx - 100, y2: cy + 500 },
+      { x1: cx + 100, y1: cy - 500, x2: cx + 100, y2: cy + 500 }
+    ];
+
+    const graphics = this.add.graphics();
+    graphics.setDepth(9);
+    graphics.lineStyle(10, 0xff0000, 0.5);
+    lines.forEach(l => {
+      graphics.beginPath();
+      graphics.moveTo(l.x1, l.y1);
+      graphics.lineTo(l.x2, l.y2);
+      graphics.strokePath();
+    });
+
+    this.tweens.add({
+      targets: graphics,
+      alpha: 1,
+      duration: 1500,
+      onComplete: () => {
+        graphics.lineStyle(20, 0xffffff, 1.0);
+        lines.forEach(l => {
+          graphics.beginPath();
+          graphics.moveTo(l.x1, l.y1);
+          graphics.lineTo(l.x2, l.y2);
+          graphics.strokePath();
+        });
+        
+        // 伤害判定
+        const px = this.player.x;
+        const py = this.player.y;
+        if (Math.abs(py - (cy - 100)) < 20 || Math.abs(py - (cy + 100)) < 20 || 
+            Math.abs(px - (cx - 100)) < 20 || Math.abs(px - (cx + 100)) < 20) {
+          this.player.takeDamage(40, '天网激光');
+        }
+
+        this.time.delayedCall(300, () => graphics.destroy());
+      }
+    });
+  }
+
+  private handleBossFlamethrower(data: { x: number; y: number; duration: number }) {
+    // 青龙龙息：持续喷射火焰
+    let elapsedTime = 0;
+    const timerEvent = this.time.addEvent({
+      delay: 200,
+      loop: true,
+      callback: () => {
+        elapsedTime += 0.2;
+        if (elapsedTime >= data.duration || !this.player.active) {
+          timerEvent.destroy();
+          return;
+        }
+        const angle = Phaser.Math.Angle.Between(data.x, data.y, this.player.x, this.player.y) + Phaser.Math.FloatBetween(-0.1, 0.1);
+        this.spawnEnemyProjectile({
+          x: data.x, y: data.y, angle, speed: 350, damage: 15, type: 'fire'
+        });
+      }
+    });
+  }
+
+  private handleSpawnPoisonCloud(data: { x: number; y: number; duration: number }) {
+    // 精英蜈蚣毒云：生成一个持续存在的范围毒区
+    const cloud = this.add.graphics();
+    cloud.fillStyle(0xaa00ff, 0.4);
+    cloud.fillCircle(data.x, data.y, 100);
+    cloud.setDepth(9);
+
+    const timerEvent = this.time.addEvent({
+      delay: 500,
+      loop: true,
+      callback: () => {
+        if (!this.player || !this.player.active) return;
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, data.x, data.y);
+        if (dist <= 100) {
+          this.player.takeDamage(5, '剧毒云雾');
+        }
+      }
+    });
+
+    this.time.delayedCall(data.duration * 1000, () => {
+      timerEvent.destroy();
+      this.tweens.add({
+        targets: cloud,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => cloud.destroy()
+      });
+    });
+  }
+
+  private handleSpawnGroundAlert(data: { x: number; y: number; radius: number; delay: number; damage: number }) {
+    // 地面红圈警告
+    const alert = this.add.graphics();
+    alert.setDepth(8);
+    alert.fillStyle(0xff0000, 0.2);
+    alert.lineStyle(2, 0xff0000, 0.8);
+    alert.fillCircle(data.x, data.y, data.radius);
+    alert.strokeCircle(data.x, data.y, data.radius);
+
+    let progress = 0;
+    const progressTimer = this.time.addEvent({
+      delay: (data.delay * 1000) / 20,
+      loop: true,
+      callback: () => {
+        progress += 0.05;
+        alert.clear();
+        alert.fillStyle(0xff0000, 0.2 + progress * 0.3);
+        alert.lineStyle(2, 0xff0000, 0.8 + progress * 0.2);
+        alert.fillCircle(data.x, data.y, data.radius);
+        alert.strokeCircle(data.x, data.y, data.radius);
+      }
+    });
+
+    this.time.delayedCall(data.delay * 1000, () => {
+      progressTimer.destroy();
+      alert.clear();
+      alert.fillStyle(0xffffff, 0.8);
+      alert.fillCircle(data.x, data.y, data.radius);
+      
+      if (this.player && this.player.active) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, data.x, data.y);
+        if (dist <= data.radius) {
+          this.player.takeDamage(data.damage, '地面爆破');
+        }
+      }
+
+      this.time.delayedCall(150, () => alert.destroy());
     });
   }
 
