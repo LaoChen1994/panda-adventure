@@ -391,6 +391,32 @@ export class GameScene extends Phaser.Scene {
       // 空岛 - 舒适天空蓝
       this.cameras.main.setBackgroundColor('#dbeafe');
       if (this.mapBackground) this.mapBackground.setTexture('map_sky_tile');
+      
+      // 在地图中心画出太极图案
+      if (!this.activeDecorators.has('taiji_center')) {
+        const taijiSprites: Phaser.GameObjects.Sprite[] = [];
+        
+        // 简单用 Graphics 绘制一个太极阴阳眼
+        const graphics = this.add.graphics();
+        graphics.setDepth(-10); // 在背景上
+        
+        // 左边阳眼 (cx - 200, cy) 白色
+        graphics.fillStyle(0xffffff, 0.6);
+        graphics.fillCircle(-200, 0, 150);
+        graphics.lineStyle(4, 0xffaa00, 0.8);
+        graphics.strokeCircle(-200, 0, 150);
+
+        // 右边阴眼 (cx + 200, cy) 黑色
+        graphics.fillStyle(0x000000, 0.6);
+        graphics.fillCircle(200, 0, 150);
+        graphics.lineStyle(4, 0x8800ff, 0.8);
+        graphics.strokeCircle(200, 0, 150);
+
+        // 我们把它当作一个假的 sprite 加入 activeDecorators 便于清理
+        const mockSprite = { destroy: () => graphics.destroy() } as any;
+        taijiSprites.push(mockSprite);
+        this.activeDecorators.set('taiji_center', taijiSprites);
+      }
     }
   }
 
@@ -1554,10 +1580,97 @@ export class GameScene extends Phaser.Scene {
     const wave = this.waveSystem.currentWaveNum;
     this.mapHazardTimer += dt;
 
+    // 地图1: 幽静翠竹林 (W1 - W5) - 竹丛减速判定
+    if (wave >= 1 && wave <= 5) {
+      // 遍历所有地表装饰物中的竹子，进行距离判定
+      let inBamboo = false;
+      for (const sprites of this.activeDecorators.values()) {
+        for (const sprite of sprites) {
+          if (sprite.texture.key === 'decor_bamboo') {
+            if (Phaser.Math.Distance.Between(this.player.x, this.player.y, sprite.x, sprite.y) < 60) {
+              inBamboo = true;
+              break;
+            }
+          }
+        }
+        if (inBamboo) break;
+      }
+      
+      // 使用动态 Modifier 实现 20% 减速
+      if (inBamboo && !this.player.attributeSystem.hasModifier('bamboo_slow')) {
+        this.player.attributeSystem.addModifier({ id: 'bamboo_slow', attribute: 'speed', addVal: 0, mulVal: -0.2 });
+      } else if (!inBamboo && this.player.attributeSystem.hasModifier('bamboo_slow')) {
+        this.player.attributeSystem.removeModifier('bamboo_slow');
+      }
+
+      // 对怪物也做简单减速
+      this.enemiesGroup.getChildren().forEach(child => {
+        const enemy = child as Enemy;
+        if (!enemy.active) return;
+        let enemyInBamboo = false;
+        for (const sprites of this.activeDecorators.values()) {
+          for (const sprite of sprites) {
+            if (sprite.texture.key === 'decor_bamboo') {
+              if (Phaser.Math.Distance.Between(enemy.x, enemy.y, sprite.x, sprite.y) < 60) {
+                enemyInBamboo = true;
+                break;
+              }
+            }
+          }
+          if (enemyInBamboo) break;
+        }
+        if (enemyInBamboo) {
+          enemy.applySlow(20, 0.5);
+        }
+      });
+    }
+
+    // 地图2: 熔岩地下城 (W6 - W15) - 间歇泉喷发
     if (wave >= 6 && wave <= 15) {
       if (this.mapHazardTimer >= 20.0) {
         this.mapHazardTimer = 0;
         this.triggerLavaGeyser();
+      }
+    }
+
+    // 地图3: 太极悬浮空岛 (W16 - W20)
+    if (wave >= 16 && wave <= 20) {
+      const cx = 0;
+      const cy = 0; // 地图中心
+      
+      // 1. 深渊边缘判定 (地图尺寸 2500x2500，半径约 1250，我们设定超过 1250 就算跌落)
+      const distFromCenter = Phaser.Math.Distance.Between(this.player.x, this.player.y, cx, cy);
+      if (distFromCenter > 1250) {
+        // 跌落深渊，扣除 20% 最大生命值，传回中心
+        const dmg = Math.floor(this.player.attributeSystem.get('hpMax') * 0.2);
+        this.player.takeDamage(dmg, '跌落深渊');
+        this.player.setPosition(cx, cy);
+        
+        // 特效
+        this.cameras.main.flash(500, 255, 0, 0);
+      }
+
+      // 2. 太极阴阳眼 Buff 判定
+      // 假设白色阳眼在 (cx - 200, cy)，黑色阴眼在 (cx + 200, cy)
+      let inYang = Phaser.Math.Distance.Between(this.player.x, this.player.y, cx - 200, cy) < 150;
+      let inYin = Phaser.Math.Distance.Between(this.player.x, this.player.y, cx + 200, cy) < 150;
+
+      // 阳眼：Attack Speed +30%, Armor 降为 0
+      if (inYang && !this.player.attributeSystem.hasModifier('taiji_yang')) {
+        this.player.attributeSystem.addModifier({ id: 'taiji_yang', attribute: 'attackSpeed', addVal: 30, mulVal: 0 });
+        this.player.attributeSystem.addModifier({ id: 'taiji_yang_armor', attribute: 'armor', addVal: -this.player.attributeSystem.get('armor'), mulVal: 0 });
+      } else if (!inYang && this.player.attributeSystem.hasModifier('taiji_yang')) {
+        this.player.attributeSystem.removeModifier('taiji_yang');
+        this.player.attributeSystem.removeModifier('taiji_yang_armor');
+      }
+
+      // 阴眼：Armor +20, Damage -50%
+      if (inYin && !this.player.attributeSystem.hasModifier('taiji_yin')) {
+        this.player.attributeSystem.addModifier({ id: 'taiji_yin', attribute: 'armor', addVal: 20, mulVal: 0 });
+        this.player.attributeSystem.addModifier({ id: 'taiji_yin_dmg', attribute: 'damageModifier', addVal: 0, mulVal: -0.5 });
+      } else if (!inYin && this.player.attributeSystem.hasModifier('taiji_yin')) {
+        this.player.attributeSystem.removeModifier('taiji_yin');
+        this.player.attributeSystem.removeModifier('taiji_yin_dmg');
       }
     }
   }
@@ -2297,6 +2410,7 @@ export class GameScene extends Phaser.Scene {
     } else if (wave >= 6 && wave <= 15) {
       decorTypes = ['decor_stone', 'decor_lava_crack'];
     } else {
+      // 空岛太极眼只在地图中心 (0,0) 附近画出来，不在随机区块里生成，这里只生成普通云彩碎石
       decorTypes = ['decor_cloud', 'decor_stone'];
     }
 
