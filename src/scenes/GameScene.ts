@@ -34,6 +34,7 @@ export class GameScene extends Phaser.Scene {
 
   // 场景状态
   private isGameActive: boolean = false;
+  private isWaveSettling: boolean = false;
   private totalKills: number = 0;
   private totalTimeElapsed: number = 0;
   private totalGoldCollected: number = 0;
@@ -1353,6 +1354,7 @@ export class GameScene extends Phaser.Scene {
   private handleWaveComplete() {
     this.physics.pause();
     this.isGameActive = false;
+    this.isWaveSettling = true;
 
     this.enemiesGroup.clear(true, true);
     this.enemyProjectilesGroup.clear(true, true);
@@ -1389,7 +1391,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.registry.set('chests_earned', 0);
 
-    this.processNextChest();
+    // 如果没有正在进行的升级，才立刻弹出宝箱/商店；否则等升级结算后触发
+    if (!this.isLevelUpActive) {
+      this.processNextChest();
+    }
   }
 
   private processNextChest() {
@@ -1618,6 +1623,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startNextWave() {
+    this.isWaveSettling = false;
     const nextWave = this.waveSystem.currentWaveNum + 1;
     
     if (nextWave > 20) {
@@ -1649,7 +1655,9 @@ export class GameScene extends Phaser.Scene {
     if (this.isLevelUpActive) {
       return; // 已经在升级选择中，不中断当前 UI
     }
-
+    if (this.player && this.player.hp <= 0) {
+      return; // 玩家已阵亡，等待复活后再弹出
+    }
     this.isLevelUpActive = true;
     this.showNextLevelUp();
   }
@@ -1740,9 +1748,13 @@ export class GameScene extends Phaser.Scene {
       this.showNextLevelUp();
     } else {
       this.isLevelUpActive = false;
-      this.isGameActive = true;
-      this.physics.resume();
-      this.overlayManager.showScreen('hud-screen');
+      if (this.isWaveSettling) {
+        this.processNextChest();
+      } else {
+        this.isGameActive = true;
+        this.physics.resume();
+        this.overlayManager.showScreen('hud-screen');
+      }
     }
   }
 
@@ -1777,9 +1789,15 @@ export class GameScene extends Phaser.Scene {
       this.player.hp = Math.round(this.player.getMaxHp() * 0.5);
       this.player.triggerInvulnerability(3.0);
 
-      this.isGameActive = true;
-      this.physics.resume();
-      this.overlayManager.showScreen('hud-screen');
+      if (this.pendingLevelUps > 0) {
+        this.isLevelUpActive = true;
+        this.showNextLevelUp();
+      } else {
+        this.isGameActive = true;
+        this.physics.resume();
+        this.overlayManager.showScreen('hud-screen');
+      }
+      
       this.overlayManager.toast('复活成功！');
     }, 800);
   }
