@@ -63,6 +63,10 @@ export class AttributeSystem {
     }
   }
 
+  public hasModifier(id: string): boolean {
+    return this.modifiers.has(id);
+  }
+
   /**
    * 批量移除符合前缀的修饰器
    */
