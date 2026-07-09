@@ -162,27 +162,48 @@
 
     <!-- 结算与广告复活界面 -->
     <div id="gameover-screen" class="ui-screen">
-      <div class="glass-card overlay-card gameover-card">
-        <h1 id="gameover-title" class="gameover-header text-red">探险中止</h1>
-        <p class="gameover-sub">你在第 <span id="gameover-wave">1</span> 波倒下了</p>
+      <div class="glass-card overlay-card gameover-card animate-zoom-in">
+        <div class="gameover-header-container">
+          <h1 id="gameover-title" class="gameover-header text-red">探险中止</h1>
+          <div class="gameover-badge">WAVE <span id="gameover-wave">1</span></div>
+        </div>
+        <p class="gameover-sub">— 🐼 探险日志 —</p>
 
         <!-- 局内统计 -->
         <div class="gameover-stats">
-          <div class="stat-row"><span>存活时间:</span> <span id="stat-time">0s</span></div>
-          <div class="stat-row"><span>消灭怪物:</span> <span id="stat-kills">0</span></div>
-          <div class="stat-row"><span>拾取金币:</span> <span id="stat-coins">0</span></div>
+          <div class="stat-row">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-info">
+              <span class="stat-label">存活时间</span>
+              <span id="stat-time" class="stat-value">0s</span>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-icon">⚔️</div>
+            <div class="stat-info">
+              <span class="stat-label">消灭怪物</span>
+              <span id="stat-kills" class="stat-value">0</span>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-icon">💰</div>
+            <div class="stat-info">
+              <span class="stat-label">拾取金币</span>
+              <span id="stat-coins" class="stat-value text-gold">0</span>
+            </div>
+          </div>
         </div>
 
         <!-- 操作区 -->
         <div class="gameover-actions">
-          <button id="revive-btn" class="btn btn-secondary btn-large">
-            📺 观看广告复活 (剩 1 次)
+          <button id="revive-btn" class="btn btn-secondary btn-large action-btn revive-anim">
+            <span class="btn-icon">❤️</span> 看广告复活 (剩 1 次)
           </button>
-          <button id="double-coins-btn" class="btn btn-primary btn-large">
-            📺 观看广告双倍金币结算
+          <button id="double-coins-btn" class="btn btn-primary btn-large action-btn">
+            <span class="btn-icon">📺</span> 双倍金币结算
           </button>
-          <button id="restart-game-btn" class="btn btn-secondary">
-            返回主界面
+          <button id="restart-game-btn" class="btn btn-outline action-btn">
+            🏠 返回主界面
           </button>
         </div>
       </div>
