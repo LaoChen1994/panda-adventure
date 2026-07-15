@@ -2021,13 +2021,18 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerLevelUp() {
     this.pendingLevelUps++;
     if (this.isLevelUpActive) {
-      return; // 已经在升级选择中，不中断当前 UI
+      return; // 已有升级在处理中，仅排队
     }
     if (this.player && this.player.hp <= 0) {
       return; // 玩家已阵亡，等待复活后再弹出
     }
+    
     this.isLevelUpActive = true;
-    this.showNextLevelUp();
+    
+    // 延迟一帧调用，避免在物理碰撞回调中直接 pause() 导致 Phaser 引擎异常卡死
+    this.time.delayedCall(1, () => {
+      this.showNextLevelUp();
+    });
   }
 
   private showNextLevelUp() {
