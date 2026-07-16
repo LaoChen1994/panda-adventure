@@ -240,9 +240,17 @@ export class GameScene extends Phaser.Scene {
       onShopBuyWeapon: (weaponId: WeaponId, cost: number) => {
         this.buyWeaponFromShop(weaponId, cost);
       },
+      // 商店：购买消耗品
+      onShopBuyConsumable: (item: any) => {
+        this.buyConsumableFromShop(item);
+      },
       // 商店：刷新集市
       onShopReroll: () => {
         this.rerollShopMarket();
+      },
+      // 商店：锁定/解锁商品
+      onShopToggleLock: (index: number) => {
+        this.toggleShopItemLock(index);
       },
       // 商店：拖拽合成
       onShopWeaponMerged: (from: number, to: number) => {
@@ -1786,41 +1794,46 @@ export class GameScene extends Phaser.Scene {
         this.processNextChest();
       }
     } else {
-      this.rerollShopMarket();
+      this.rerollShopMarket(true);
+      // openShopScreen is called inside rerollShopMarket
+    }
+  }
+
+  private toggleShopItemLock(index: number) {
+    const item = this.shopMarketItems.find(good => good.shopSlot === index);
+    if (item) {
+      item.isLocked = !item.isLocked;
       this.openShopScreen();
     }
   }
 
-  private rerollShopMarket() {
+  private rerollShopMarket(isInitial: boolean = false) {
     const wave = this.waveSystem.currentWaveNum;
-    const rerollCount = this.registry.get('reroll_count') || 0;
-    const hasAbacusItem = this.player.attributeSystem.getAllModifiers().some(mod => mod.id === 'item_20');
-    const discount = hasAbacusItem ? 2 : 0;
     
-    const baseReroll = 1 + Math.floor(wave / 2) + rerollCount;
-    const finalRerollCost = Math.max(1, baseReroll - discount);
+    if (!isInitial) {
+      const rerollCount = this.registry.get('reroll_count') || 0;
+      const hasAbacusItem = this.player.attributeSystem.getAllModifiers().some(mod => mod.id === 'item_20');
+      const discount = hasAbacusItem ? 2 : 0;
+      
+      const baseReroll = 1 + Math.floor(wave / 2) + rerollCount;
+      const finalRerollCost = Math.max(1, baseReroll - discount);
 
-    if (rerollCount > 0 && this.player.gold < finalRerollCost) {
-      this.overlayManager.toast('竹金币不足以刷新商店！');
-      return;
+      if (rerollCount > 0 && this.player.gold < finalRerollCost) {
+        this.overlayManager.toast('竹金币不足以刷新商店！');
+        return;
+      }
+
+      if (rerollCount > 0) {
+        this.player.gold -= finalRerollCost;
+      }
+      this.registry.set('reroll_count', rerollCount + 1);
     }
-
-    if (rerollCount > 0) {
-      this.player.gold -= finalRerollCost;
-    }
-
-    this.registry.set('reroll_count', rerollCount + 1);
 
     const luck = this.player.attributeSystem.get('luck');
-    const items = ItemSystem.getRandomShopItems(3, wave, luck);
-    const weaponsList: WeaponId[] = ['bamboo_stick', 'bamboo_bow', 'gold_abacus', 'stone_shield', 'wine_pot', 'wrench'];
-    const randomWpn = weaponsList[Math.floor(Math.random() * weaponsList.length)];
     
-    let quality = WeaponQuality.WHITE;
-    const wpnRoll = Math.random() * 100;
-    if (wave > 10 && wpnRoll < 30) quality = WeaponQuality.BLUE;
-    else if (wave > 5 && wpnRoll < 50) quality = WeaponQuality.GREEN;
-
+    const newShopItems: any[] = [];
+    const weaponsList: WeaponId[] = ['bamboo_stick', 'bamboo_bow', 'gold_abacus', 'stone_shield', 'wine_pot', 'wrench', 'spear', 'fan'];
+    
     const basePriceMap = {
       [WeaponQuality.WHITE]: 15,
       [WeaponQuality.GREEN]: 30,
@@ -1829,17 +1842,52 @@ export class GameScene extends Phaser.Scene {
       [WeaponQuality.RED]: 240
     };
 
-    this.shopMarketItems = [
-      ...items,
-      {
-        id: randomWpn,
-        name: `${WEAPON_DATABASE[randomWpn].name}`,
-        quality: quality,
-        price: ItemSystem.calculatePrice(basePriceMap[quality], luck),
-        isWeapon: true
+    // Slot 0, 1, 2: Items, Slot 3: Weapon
+    for (let i = 0; i < 4; i++) {
+      const existing = this.shopMarketItems.find(item => item.shopSlot === i);
+      if (existing && existing.isLocked) {
+        newShopItems.push(existing);
+      } else {
+        if (i < 3) {
+          const isConsumable = Math.random() < 0.25; // 25% 概率出恢复道具
+          if (isConsumable) {
+            newShopItems.push({
+              id: 'consumable_heal',
+              name: '新鲜竹笋',
+              desc: '恢复 30% 最大生命值',
+              quality: 'green',
+              price: ItemSystem.calculatePrice(15, luck),
+              isConsumable: true,
+              healPercent: 0.3,
+              shopSlot: i,
+              isLocked: false
+            });
+          } else {
+            const newItems = ItemSystem.getRandomShopItems(1, wave, luck);
+            const item = newItems[0];
+            newShopItems.push({ ...item, shopSlot: i, isLocked: false });
+          }
+        } else {
+          const randomWpn = weaponsList[Math.floor(Math.random() * weaponsList.length)];
+          let quality = WeaponQuality.WHITE;
+          const wpnRoll = Math.random() * 100;
+          if (wave > 10 && wpnRoll < 30) quality = WeaponQuality.BLUE;
+          else if (wave > 5 && wpnRoll < 50) quality = WeaponQuality.GREEN;
+          
+          newShopItems.push({
+            id: randomWpn,
+            name: `${WEAPON_DATABASE[randomWpn].name}`,
+            quality: quality,
+            price: ItemSystem.calculatePrice(basePriceMap[quality], luck),
+            isWeapon: true,
+            shopSlot: i,
+            isLocked: false
+          });
+        }
       }
-    ];
+    }
 
+    this.shopMarketItems = newShopItems;
     this.openShopScreen();
   }
 
@@ -1912,7 +1960,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const index = this.shopMarketItems.findIndex(good => !good.isWeapon && good.id === item.id);
+    const index = this.shopMarketItems.findIndex(good => !good.isWeapon && !good.isConsumable && good.id === item.id);
     if (index === -1) return;
 
     this.player.gold -= finalPrice;
@@ -1920,6 +1968,28 @@ export class GameScene extends Phaser.Scene {
 
     this.applyItemModifiers(item);
     this.overlayManager.toast(`获得道具：${item.name}`);
+
+    this.openShopScreen();
+  }
+
+  private buyConsumableFromShop(item: any) {
+    if (this.player.gold < item.price) {
+      this.overlayManager.toast('竹子金币不足！');
+      return;
+    }
+
+    const index = this.shopMarketItems.findIndex(good => good.isConsumable && good.shopSlot === item.shopSlot);
+    if (index === -1) return;
+
+    this.player.gold -= item.price;
+    this.shopMarketItems.splice(index, 1);
+
+    if (item.healPercent) {
+      const hpMax = this.player.attributeSystem.get('hpMax');
+      const healAmount = Math.round(hpMax * item.healPercent);
+      this.player.heal(healAmount);
+      this.overlayManager.toast(`购买 ${item.name}，恢复 ${healAmount} HP`, '#00ff00');
+    }
 
     this.openShopScreen();
   }

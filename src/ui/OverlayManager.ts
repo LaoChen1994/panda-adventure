@@ -26,8 +26,10 @@ export class OverlayManager {
   private onStartGameCallback: (charId: CharacterId) => void = () => {};
   private onLevelUpSelectedCallback: (modIndex: number) => void = () => {};
   private onShopBuyItemCallback: (item: ItemConfig) => void = () => {};
+  private onShopBuyConsumableCallback: (item: any) => void = () => {};
   private onShopBuyWeaponCallback: (weaponId: WeaponId, cost: number) => void = () => {};
   private onShopRerollCallback: () => void = () => {};
+  private onShopToggleLockCallback: (index: number) => void = () => {};
   private onShopWeaponMergedCallback: (from: number, to: number) => void = () => {};
   private onShopNextWaveCallback: () => void = () => {};
   private onReviveCallback: () => void = () => {};
@@ -46,8 +48,10 @@ export class OverlayManager {
     onStartGame: (charId: CharacterId) => void;
     onLevelUpSelected: (optionIndex: number) => void;
     onShopBuyItem: (item: ItemConfig) => void;
+    onShopBuyConsumable: (item: any) => void;
     onShopBuyWeapon: (weaponId: WeaponId, cost: number) => void;
     onShopReroll: () => void;
+    onShopToggleLock: (index: number) => void;
     onShopWeaponMerged: (from: number, to: number) => void;
     onShopNextWave: () => void;
     onRevive: () => void;
@@ -58,8 +62,10 @@ export class OverlayManager {
     this.onStartGameCallback = handlers.onStartGame;
     this.onLevelUpSelectedCallback = handlers.onLevelUpSelected;
     this.onShopBuyItemCallback = handlers.onShopBuyItem;
+    this.onShopBuyConsumableCallback = handlers.onShopBuyConsumable;
     this.onShopBuyWeaponCallback = handlers.onShopBuyWeapon;
     this.onShopRerollCallback = handlers.onShopReroll;
+    this.onShopToggleLockCallback = handlers.onShopToggleLock;
     this.onShopWeaponMergedCallback = handlers.onShopWeaponMerged;
     this.onShopNextWaveCallback = handlers.onShopNextWave;
     this.onReviveCallback = handlers.onRevive;
@@ -653,7 +659,7 @@ export class OverlayManager {
     gold: number;
     rerollCost: number;
     harvestIncome: number;
-    marketItems: (ItemConfig | { id: string; name: string; quality: WeaponQuality; price: number; isWeapon: true })[];
+    marketItems: any[];
     equippedWeapons: (EquippedWeapon | null)[];
     purchasedItems: { name: string; quality: string }[];
   }) {
@@ -692,6 +698,7 @@ export class OverlayManager {
 
         // 区分武器与道具
         const isWeapon = 'isWeapon' in good;
+        const isConsumable = 'isConsumable' in good;
         
         let qualityName = 'white';
         let desc = '';
@@ -710,6 +717,10 @@ export class OverlayManager {
               tags.map((t: string) => `<span style="font-size: 0.65rem; padding: 2px 6px; background: rgba(0,0,0,0.3); border-radius: 4px; color: #fff;">${t}</span>`).join('') +
               `</div>`;
           }
+        } else if (isConsumable) {
+          qualityName = good.quality;
+          desc = good.desc;
+          iconHtml = `<span style="font-size: 1.5rem;">${good.emoji || '🎍'}</span>`;
         } else {
           qualityName = good.quality;
           desc = good.desc;
@@ -725,8 +736,13 @@ export class OverlayManager {
           red: 'var(--q5-red)'
         };
 
+        const lockIcon = good.isLocked ? '🔒' : '🔓';
+
         card.innerHTML = `
-          <div class="good-top">
+          <div class="good-top" style="position: relative;">
+            <button class="lock-btn" style="position:absolute; top: -5px; right: -5px; background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 4px; z-index: 10;">
+              ${lockIcon}
+            </button>
             <div class="good-icon" style="border-color: ${qualityColors[qualityName]}; display: flex; align-items: center; justify-content: center;">${iconHtml}</div>
             <div class="good-details">
               <h4 style="color: ${qualityColors[qualityName]}">${good.name}</h4>
@@ -743,8 +759,17 @@ export class OverlayManager {
         card.querySelector('.buy-btn')?.addEventListener('click', () => {
           if (isWeapon) {
             this.onShopBuyWeaponCallback(good.id as WeaponId, good.price);
+          } else if (isConsumable) {
+            this.onShopBuyConsumableCallback(good);
           } else {
             this.onShopBuyItemCallback(good as ItemConfig);
+          }
+        });
+
+        // 点击锁定
+        card.querySelector('.lock-btn')?.addEventListener('click', () => {
+          if (good.shopSlot !== undefined) {
+            this.onShopToggleLockCallback(good.shopSlot);
           }
         });
 
